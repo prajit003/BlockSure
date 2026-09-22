@@ -162,15 +162,37 @@ const state = {
 
 let selectedProductForInspect = null;
 
-// Initialize
-document.addEventListener("DOMContentLoaded", () => {
-    state.products.forEach(p => {
-        p.customHash = calculateCustomHash(p.serialNumber, p.modelName, p.manufacturer, p.registrationTimestamp);
-    });
+// Safe Lucide icon initializer that never throws
+function safeCreateIcons() {
+    try {
+        if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+            lucide.createIcons();
+        }
+    } catch (e) {
+        console.warn("Lucide render notice:", e);
+    }
+}
+
+// App Initialization
+function initApp() {
+    try {
+        state.products.forEach(p => {
+            if (!p.customHash) {
+                p.customHash = calculateCustomHash(p.serialNumber, p.modelName, p.manufacturer, p.registrationTimestamp);
+            }
+        });
+    } catch (e) {
+        console.warn("Fingerprint init notice:", e);
+    }
 
     checkMetaMaskProvider();
-    lucide.createIcons();
-});
+    safeCreateIcons();
+}
+
+document.addEventListener("DOMContentLoaded", initApp);
+if (document.readyState === "complete" || document.readyState === "interactive") {
+    initApp();
+}
 
 // Non-SHA256 Cryptographic Fingerprint Algorithm (Keccak-256 + 31-bit Polynomial Checksum)
 function calculateCustomHash(serialNumber, modelName, mfrAddr, regTime) {
@@ -179,29 +201,105 @@ function calculateCustomHash(serialNumber, modelName, mfrAddr, regTime) {
     for (let i = 0; i < raw.length; i++) {
         polyChecksum = (polyChecksum * 31 + raw.charCodeAt(i)) >>> 0;
     }
-    const keccakHash = ethers.keccak256(ethers.toUtf8Bytes(raw));
     const polyHex = polyChecksum.toString(16).padStart(8, '0');
-    return keccakHash.slice(0, 58) + polyHex;
+    if (typeof ethers !== 'undefined' && ethers.keccak256 && ethers.toUtf8Bytes) {
+        try {
+            const keccakHash = ethers.keccak256(ethers.toUtf8Bytes(raw));
+            return keccakHash.slice(0, 58) + polyHex;
+        } catch (e) {
+            // fallback
+        }
+    }
+    // Deterministic fallback
+    let h = 0x811c9dc5;
+    for (let i = 0; i < raw.length; i++) {
+        h ^= raw.charCodeAt(i);
+        h = Math.imul(h, 0x01000193);
+    }
+    return "0x" + Math.abs(h).toString(16).padStart(56, '0') + polyHex;
 }
 
 // Generate realistic Sepolia transaction hash
 function generateSepoliaTxHash() {
-    const randomBytes = ethers.randomBytes(32);
-    return ethers.hexlify(randomBytes);
+    try {
+        if (typeof ethers !== 'undefined' && ethers.randomBytes && ethers.hexlify) {
+            const randomBytes = ethers.randomBytes(32);
+            return ethers.hexlify(randomBytes);
+        }
+    } catch (e) {}
+    let res = "0x";
+    const chars = "0123456789abcdef";
+    for (let i = 0; i < 64; i++) res += chars[Math.floor(Math.random() * 16)];
+    return res;
 }
 
 // ------------------------------------------------------------------
 // METAMASK & SEPOLIA TESTNET NETWORK SWITCHER
 // ------------------------------------------------------------------
-async function checkMetaMaskProvider() {
+function getEthereumProvider() {
+    if (typeof window === 'undefined') return null;
     if (window.ethereum) {
+        if (window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
+            return window.ethereum.providers.find(p => p.isMetaMask) || window.ethereum;
+        }
+        return window.ethereum;
+    }
+    return null;
+}
+
+function openWalletModal() {
+    const m = document.getElementById('walletModal');
+    if (m) m.classList.remove('hidden');
+    safeCreateIcons();
+}
+
+function closeWalletModal() {
+    const m = document.getElementById('walletModal');
+    if (m) m.classList.add('hidden');
+}
+
+function activateSimulatorWallet() {
+    closeWalletModal();
+    const simAddr = "0x71C6793F11ab4025E7024259b3B9B97F7A267b42";
+    setupConnectedAccount(simAddr, true);
+    showToast("Sepolia Testnet In-Memory Simulator active (0.25 Sepolia ETH balance)", "success");
+}
+
+async function triggerMetaMaskConnect() {
+    closeWalletModal();
+    await connectSepoliaWallet();
+}
+
+async function checkMetaMaskProvider() {
+    const ethereum = getEthereumProvider();
+    if (ethereum) {
         try {
-            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+            const chainId = await ethereum.request({ method: 'eth_chainId' });
             if (chainId === SEPOLIA_CONFIG.chainIdHex) {
-                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                const accounts = await ethereum.request({ method: 'eth_accounts' });
                 if (accounts && accounts.length > 0) {
-                    setupConnectedAccount(accounts[0]);
+                    await setupConnectedAccount(accounts[0], false);
                 }
+            }
+
+            // Register provider event listeners once
+            if (!window.__blockSureEthEventsAttached) {
+                window.__blockSureEthEventsAttached = true;
+                ethereum.on('accountsChanged', (accounts) => {
+                    if (accounts && accounts.length > 0) {
+                        setupConnectedAccount(accounts[0], false);
+                        showToast(`Switched account: ${accounts[0].substring(0, 6)}...${accounts[0].substring(38)}`, "info");
+                    } else {
+                        state.web3.connectedAddress = null;
+                        state.web3.isMetaMaskConnected = false;
+                        const btnText = document.getElementById('walletBtnText');
+                        if (btnText) btnText.innerText = '🦊 Connect Sepolia Wallet';
+                    }
+                });
+
+                ethereum.on('chainChanged', () => {
+                    window.location.reload();
+                });
             }
         } catch (e) {
             console.log("MetaMask auto-check:", e);
@@ -210,27 +308,35 @@ async function checkMetaMaskProvider() {
 }
 
 async function connectSepoliaWallet() {
-    if (!window.ethereum) {
-        showToast("MetaMask not found! Operating in Sepolia In-Memory Ledger Simulator.", "info");
+    const ethereum = getEthereumProvider();
+    if (!ethereum) {
+        openWalletModal();
         return;
     }
 
+    const btnText = document.getElementById('walletBtnText');
+    if (btnText) btnText.innerText = "Connecting...";
+
     try {
         // Request accounts
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+        if (!accounts || accounts.length === 0) {
+            showToast("No accounts authorized in MetaMask", "error");
+            if (btnText) btnText.innerText = "🦊 Connect Sepolia Wallet";
+            return;
+        }
         
         // Check and Switch to Sepolia Testnet
-        const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+        const currentChainId = await ethereum.request({ method: 'eth_chainId' });
         if (currentChainId !== SEPOLIA_CONFIG.chainIdHex) {
             try {
-                await window.ethereum.request({
+                await ethereum.request({
                     method: 'wallet_switchEthereumChain',
                     params: [{ chainId: SEPOLIA_CONFIG.chainIdHex }]
                 });
             } catch (switchError) {
-                // If Sepolia not added, add it
                 if (switchError.code === 4902) {
-                    await window.ethereum.request({
+                    await ethereum.request({
                         method: 'wallet_addEthereumChain',
                         params: [{
                             chainId: SEPOLIA_CONFIG.chainIdHex,
@@ -241,41 +347,59 @@ async function connectSepoliaWallet() {
                         }]
                     });
                 } else {
-                    throw switchError;
+                    console.warn("Chain switch error:", switchError);
                 }
             }
         }
 
-        setupConnectedAccount(accounts[0]);
-        showToast(`Connected to Sepolia Testnet (${accounts[0].substring(0, 6)}...${accounts[0].substring(38)})`, "success");
+        await setupConnectedAccount(accounts[0], false);
+        showToast(`Connected to Sepolia: ${accounts[0].substring(0, 6)}...${accounts[0].substring(38)}`, "success");
     } catch (err) {
         console.error("Wallet connection error:", err);
-        showToast(err.message || "Failed to connect Sepolia wallet", "error");
+        if (btnText) btnText.innerText = "🦊 Connect Sepolia Wallet";
+        if (err.code === 4001) {
+            showToast("MetaMask connection cancelled by user.", "info");
+        } else {
+            showToast(err.message || "Failed to connect Sepolia wallet", "error");
+        }
     }
 }
 
-async function setupConnectedAccount(address) {
+async function setupConnectedAccount(address, isSimulated = false) {
     state.web3.connectedAddress = address;
-    state.web3.isMetaMaskConnected = true;
+    state.web3.isMetaMaskConnected = !isSimulated;
 
     // Update wallet button
+    const btn = document.getElementById('connectMetaMaskBtn');
     const btnText = document.getElementById('walletBtnText');
     if (btnText) {
-        btnText.innerText = `${address.substring(0, 6)}...${address.substring(38)} (Sepolia)`;
+        btnText.innerText = `🟢 ${address.substring(0, 6)}...${address.substring(38)} (Sepolia)`;
+    }
+    if (btn) {
+        btn.className = "px-3.5 py-2 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/50 text-xs font-mono font-semibold transition flex items-center gap-1.5 shadow-sm";
     }
 
-    // Try fetching live Sepolia ETH balance
-    try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const balance = await provider.getBalance(address);
-        const ethFormatted = parseFloat(ethers.formatEther(balance)).toFixed(4);
-        state.web3.sepoliaBalance = `${ethFormatted} Sepolia ETH`;
-    } catch (e) {
+    // Fetch live Sepolia ETH balance if real MetaMask
+    if (!isSimulated && window.ethereum && typeof ethers !== 'undefined' && ethers.BrowserProvider) {
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const balance = await provider.getBalance(address);
+            const ethFormatted = parseFloat(ethers.formatEther(balance)).toFixed(4);
+            state.web3.sepoliaBalance = `${ethFormatted} Sepolia ETH`;
+        } catch (e) {
+            console.warn("Live balance fetch notice:", e);
+            state.web3.sepoliaBalance = "0.2500 Sepolia ETH";
+        }
+    } else {
         state.web3.sepoliaBalance = "0.2500 Sepolia ETH";
     }
 
     const balEl = document.getElementById('headerSepoliaBalance');
     if (balEl) balEl.innerText = state.web3.sepoliaBalance;
+
+    if (state.auth.isAuthenticated) {
+        renderAll();
+    }
 }
 
 // ------------------------------------------------------------------
@@ -309,7 +433,7 @@ function openLoginModal(role) {
     }
 
     modal.classList.remove('hidden');
-    lucide.createIcons();
+    safeCreateIcons();
 }
 
 function closeLoginModal() {
@@ -323,7 +447,7 @@ function handleLoginSubmit(e) {
     const labels = {
         manufacturer: 'Manufacturer Portal',
         service: 'Authorized Service Center',
-        customer: 'Customer & Owner',
+        customer: 'Customer Dashboard',
         verifier: 'Public Inspector'
     };
 
@@ -341,8 +465,12 @@ function launchApplication(role, label) {
     document.getElementById('headerUserSession').classList.add('flex');
     document.getElementById('activeUserLabel').innerText = label;
 
-    renderAll();
+    // 1. Instantly unhide the selected role view FIRST so page is never blank
     switchTab(role);
+
+    // 2. Safely render all dashboard portals
+    renderAll();
+
     showToast(`Authenticated on Sepolia Testnet! Welcome to ${label}.`, "success");
 }
 
@@ -361,12 +489,14 @@ function handleLogout() {
 // GLOBAL RENDER & TAB SWITCHER
 // ------------------------------------------------------------------
 function renderAll() {
-    renderManufacturerPortal();
-    renderCustomerPortal();
-    renderServiceCenterPortal();
-    if (state.products.length > 0) {
-        renderVerifierPortal(selectedProductForInspect || state.products[0]);
-    }
+    try { renderManufacturerPortal(); } catch (e) { console.warn("Mfr portal render:", e); }
+    try { renderCustomerPortal(); } catch (e) { console.warn("Customer portal render:", e); }
+    try { renderServiceCenterPortal(); } catch (e) { console.warn("Service portal render:", e); }
+    try {
+        if (state.products.length > 0) {
+            renderVerifierPortal(selectedProductForInspect || state.products[0]);
+        }
+    } catch (e) { console.warn("Verifier portal render:", e); }
 }
 
 function switchTab(tabName) {
@@ -379,11 +509,26 @@ function switchTab(tabName) {
     if (tabBtn) tabBtn.classList.add('active');
     if (portalView) portalView.classList.remove('hidden');
 
-    if (tabName === 'verifier' && state.products.length > 0) {
-        renderVerifierPortal(selectedProductForInspect || state.products[0]);
+    const labels = {
+        manufacturer: 'Manufacturer Portal',
+        service: 'Authorized Service Center',
+        customer: 'Customer Dashboard',
+        verifier: 'Public Inspector'
+    };
+    const activeLabelEl = document.getElementById('activeUserLabel');
+    if (activeLabelEl && labels[tabName]) {
+        activeLabelEl.innerText = labels[tabName];
     }
 
-    lucide.createIcons();
+    if (tabName === 'verifier' && state.products.length > 0) {
+        try {
+            renderVerifierPortal(selectedProductForInspect || state.products[0]);
+        } catch (e) {
+            console.warn("Verifier tab switch render:", e);
+        }
+    }
+
+    safeCreateIcons();
 }
 
 // ------------------------------------------------------------------
@@ -652,7 +797,7 @@ function renderCustomerPortal() {
         </div>
     `).join('');
 
-    lucide.createIcons();
+    safeCreateIcons();
 }
 
 function handleActivateWarranty(e) {
@@ -845,20 +990,29 @@ function renderVerifierPortal(prod) {
     const container = document.getElementById('qrcodeContainer');
     if (container) {
         container.innerHTML = '';
+        let qrRendered = false;
         if (typeof QRCode !== 'undefined') {
-            new QRCode(container, {
-                text: JSON.stringify({
-                    id: prod.id,
-                    sn: prod.serialNumber,
-                    hash: prod.customHash,
-                    network: "Sepolia Testnet",
-                    tx: prod.txHash
-                }),
-                width: 140,
-                height: 140,
-                colorDark: "#090d16",
-                colorLight: "#ffffff"
-            });
+            try {
+                new QRCode(container, {
+                    text: JSON.stringify({
+                        id: prod.id,
+                        sn: prod.serialNumber,
+                        hash: prod.customHash,
+                        network: "Sepolia Testnet",
+                        tx: prod.txHash
+                    }),
+                    width: 140,
+                    height: 140,
+                    colorDark: "#090d16",
+                    colorLight: "#ffffff"
+                });
+                qrRendered = true;
+            } catch (qrErr) {
+                console.warn("QRCode canvas rendering notice:", qrErr);
+            }
+        }
+        if (!qrRendered) {
+            container.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(prod.serialNumber)}" alt="QR Code" class="w-[140px] h-[140px] rounded-lg">`;
         }
     }
 
@@ -938,7 +1092,7 @@ function renderVerifierPortal(prod) {
         </div>
     `).join('');
 
-    lucide.createIcons();
+    safeCreateIcons();
 }
 
 function openPrintableCertificate() {
