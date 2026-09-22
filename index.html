@@ -17,425 +17,416 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
 
-    <!-- TOP HEADER NAVBAR -->
-    <header class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+    <!-- ========================================================= -->
+    <!-- 1. FULL-SCREEN MANDATORY ENTERPRISE LOGIN SCREEN -->
+    <!-- ========================================================= -->
+    <section id="loginScreen" class="min-h-screen flex flex-col justify-center items-center px-4 py-12 relative z-50 bg-slate-950">
+        <div class="max-w-md w-full glass-panel p-8 space-y-6 border-sky-500/30 shadow-2xl relative">
             
-            <!-- Brand & Metadata -->
-            <div class="flex items-center gap-3.5">
-                <div class="p-3 bg-sky-500/10 border border-sky-500/30 rounded-2xl text-sky-400 shadow-lg shadow-sky-500/10">
-                    <i data-lucide="shield-check" class="w-7 h-7"></i>
+            <!-- App Branding -->
+            <div class="text-center space-y-2">
+                <div class="inline-flex p-3.5 bg-sky-500/10 border border-sky-500/30 rounded-2xl text-sky-400 shadow-xl shadow-sky-500/10 mb-2">
+                    <i data-lucide="shield-check" class="w-10 h-10"></i>
                 </div>
-                <div>
-                    <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                        BlockSure <span class="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">Enterprise</span>
-                    </h1>
-                    <p class="text-xs text-slate-400">VIT Blockchain Project: R ALWIN EBENEZER (25BCE5056) & R PRAJIT (25BCE5022)</p>
-                </div>
+                <h1 class="text-2xl font-extrabold tracking-tight text-white flex items-center justify-center gap-2">
+                    BlockSure <span class="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">Enterprise</span>
+                </h1>
+                <p class="text-xs text-slate-400">Decentralized Warranty & Electronic Asset Ownership Protocol</p>
             </div>
 
-            <!-- Session & Auth Controls -->
-            <div class="flex items-center gap-3">
-                <div id="authRolePill" class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-slate-300 font-medium">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>Role: <strong id="activeRoleLabel" class="text-sky-300">Manufacturer (Sim)</strong></span>
+            <!-- Login Form -->
+            <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="text-xs font-semibold text-slate-300 block mb-1.5">Select Access Portal / Role</label>
+                    <select id="loginRoleSelect" onchange="updatePasscodePlaceholder()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-500 font-medium">
+                        <option value="manufacturer">🏭 Manufacturer Portal</option>
+                        <option value="service">🛠️ Authorized Service Center</option>
+                        <option value="customer">👤 Customer & Owner Dashboard</option>
+                        <option value="verifier">🔍 Public Verification Inspector (Guest)</option>
+                    </select>
                 </div>
 
-                <button onclick="openAuthModal()" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-medium text-xs transition shadow-lg shadow-sky-600/20 flex items-center gap-2">
-                    <i data-lucide="key-round" class="w-4 h-4"></i> Login / Credentials
+                <div id="passcodeGroup">
+                    <label class="text-xs font-semibold text-slate-300 block mb-1.5">Security Passcode / Secret Key</label>
+                    <input type="password" id="loginPasscode" placeholder="Enter Manufacturer Key (MFR-SEC-2026-KEY)" required
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-500 font-mono">
+                </div>
+
+                <!-- Credential Demo Help Box -->
+                <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                    <div class="font-semibold text-slate-300 flex items-center gap-1">
+                        <i data-lucide="key" class="w-3.5 h-3.5 text-sky-400"></i> Portal Access Credentials:
+                    </div>
+                    <p>• <strong>Manufacturer Key:</strong> <code class="text-sky-300 font-mono">MFR-SEC-2026-KEY</code></p>
+                    <p>• <strong>Service Center Key:</strong> <code class="text-amber-300 font-mono">SC-AUTH-9988-SEC</code></p>
+                    <p>• <strong>Customer Access:</strong> <code class="text-emerald-300 font-mono">1234</code> (or any 4-digit PIN)</p>
+                </div>
+
+                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-semibold py-3.5 rounded-xl text-sm transition shadow-lg shadow-sky-600/25 flex items-center justify-center gap-2">
+                    <i data-lucide="log-in" class="w-4 h-4"></i> Authenticate & Launch Application
+                </button>
+            </form>
+
+            <div class="text-center pt-2">
+                <span class="text-[11px] text-slate-500">Secured by Ethereum Virtual Machine & Custom Cryptographic Fingerprinting</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- 2. MAIN DASHBOARD (HIDDEN UNTIL AUTHENTICATED) -->
+    <!-- ========================================================= -->
+    <div id="mainDashboard" class="hidden min-h-screen flex flex-col flex-1">
+        
+        <!-- TOP HEADER NAVBAR -->
+        <header class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                
+                <!-- Brand Info -->
+                <div class="flex items-center gap-3.5">
+                    <div class="p-3 bg-sky-500/10 border border-sky-500/30 rounded-2xl text-sky-400 shadow-lg shadow-sky-500/10">
+                        <i data-lucide="shield-check" class="w-7 h-7"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                            BlockSure <span class="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">Enterprise</span>
+                        </h1>
+                        <p class="text-xs text-slate-400">Decentralized Warranty & Electronic Asset Ownership Protocol</p>
+                    </div>
+                </div>
+
+                <!-- Session Info & Logout -->
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-slate-300 font-medium">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>Logged in as: <strong id="activeRoleLabel" class="text-sky-300">Manufacturer Portal</strong></span>
+                    </div>
+
+                    <button onclick="handleLogout()" class="px-4 py-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-800/60 text-rose-300 font-semibold text-xs transition flex items-center gap-1.5">
+                        <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Logout
+                    </button>
+                </div>
+
+            </div>
+        </header>
+
+        <!-- MAIN CONTAINER -->
+        <main class="max-w-7xl mx-auto px-6 py-8 flex-1 w-full flex flex-col gap-8">
+
+            <!-- ROLE PORTAL SELECTOR TABS -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-900/80 p-2 rounded-2xl border border-slate-800">
+                <button onclick="switchTab('manufacturer')" id="tab-manufacturer" class="nav-btn active flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold">
+                    <i data-lucide="factory" class="w-4 h-4"></i> Manufacturer
+                </button>
+                <button onclick="switchTab('customer')" id="tab-customer" class="nav-btn flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold">
+                    <i data-lucide="user-check" class="w-4 h-4"></i> Customer Portal
+                </button>
+                <button onclick="switchTab('service')" id="tab-service" class="nav-btn flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold">
+                    <i data-lucide="wrench" class="w-4 h-4"></i> Service Center
+                </button>
+                <button onclick="switchTab('verifier')" id="tab-verifier" class="nav-btn flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold">
+                    <i data-lucide="qr-code" class="w-4 h-4"></i> Public Verifier
                 </button>
             </div>
 
-        </div>
-    </header>
-
-    <!-- MAIN CONTAINER -->
-    <main class="max-w-7xl mx-auto px-6 py-8 flex-1 w-full flex flex-col gap-8">
-
-        <!-- ROLE PORTAL SELECTOR TABS -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-900/80 p-2 rounded-2xl border border-slate-800">
-            <button onclick="switchTab('manufacturer')" id="tab-manufacturer" class="nav-btn active flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold">
-                <i data-lucide="factory" class="w-4 h-4"></i> Manufacturer
-            </button>
-            <button onclick="switchTab('customer')" id="tab-customer" class="nav-btn flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold">
-                <i data-lucide="user-check" class="w-4 h-4"></i> Customer Portal
-            </button>
-            <button onclick="switchTab('service')" id="tab-service" class="nav-btn flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold">
-                <i data-lucide="wrench" class="w-4 h-4"></i> Service Center
-            </button>
-            <button onclick="switchTab('verifier')" id="tab-verifier" class="nav-btn flex items-center justify-center gap-2 py-3 px-4 text-sm font-semibold">
-                <i data-lucide="qr-code" class="w-4 h-4"></i> Public Verifier
-            </button>
-        </div>
-
-        <!-- NOTIFICATION TOAST BAR -->
-        <div id="toast" class="hidden p-4 rounded-2xl border text-sm flex items-center justify-between transition-all">
-            <div class="flex items-center gap-2.5">
-                <i id="toastIcon" data-lucide="info" class="w-5 h-5"></i>
-                <span id="toastMsg">Notification message</span>
-            </div>
-            <button onclick="hideToast()" class="text-slate-400 hover:text-white">&times;</button>
-        </div>
-
-        <!-- ========================================================= -->
-        <!-- 1. MANUFACTURER PORTAL TAB -->
-        <!-- ========================================================= -->
-        <section id="portal-manufacturer" class="portal-view space-y-8">
-            <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-slate-800 pb-4">
-                <div>
-                    <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
-                        <i data-lucide="factory" class="text-sky-400 w-6 h-6"></i> Manufacturer Control Center
-                    </h2>
-                    <p class="text-xs text-slate-400 mt-1">Mint NFT Digital Warranties, publish Merkle Tree Batch Roots, and manage Multi-Sig Service Center approvals.</p>
+            <!-- NOTIFICATION TOAST BAR -->
+            <div id="toast" class="hidden p-4 rounded-2xl border text-sm flex items-center justify-between transition-all">
+                <div class="flex items-center gap-2.5">
+                    <i id="toastIcon" data-lucide="info" class="w-5 h-5"></i>
+                    <span id="toastMsg">Notification message</span>
                 </div>
-                <span class="text-xs px-3 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/30 font-medium">
-                    Authorized Manufacturer Key: Active
-                </span>
+                <button onclick="hideToast()" class="text-slate-400 hover:text-white">&times;</button>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Registration Form -->
-                <div class="glass-panel p-6 space-y-5 border-sky-500/20">
-                    <h3 class="font-bold text-white text-base flex items-center gap-2">
-                        <i data-lucide="plus-circle" class="text-sky-400 w-5 h-5"></i> Register & Mint Product NFT
-                    </h3>
-                    <form id="mfrRegisterForm" onsubmit="handleRegisterProduct(event)" class="space-y-4">
-                        <div>
-                            <label class="text-xs text-slate-400 block mb-1.5">Serial Number (Unique)</label>
-                            <input type="text" id="mfrSerial" placeholder="e.g. SN-APPLE-2026-X99" required
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
-                        </div>
-                        <div>
-                            <label class="text-xs text-slate-400 block mb-1.5">Model Name</label>
-                            <input type="text" id="mfrModel" placeholder="e.g. MacBook Pro M3 Max" required
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
-                        </div>
-                        <div>
-                            <label class="text-xs text-slate-400 block mb-1.5">Brand</label>
-                            <input type="text" id="mfrBrand" placeholder="e.g. Apple Inc." required
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
-                        </div>
-                        <div>
-                            <label class="text-xs text-slate-400 block mb-1.5">Warranty Period (Days)</label>
-                            <input type="number" id="mfrDuration" value="730" required
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
-                        </div>
+            <!-- MANUFACTURER PORTAL TAB -->
+            <section id="portal-manufacturer" class="portal-view space-y-8">
+                <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
+                            <i data-lucide="factory" class="text-sky-400 w-6 h-6"></i> Manufacturer Control Center
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">Mint NFT Digital Warranties, publish Merkle Tree Batch Roots, and manage Service Center approvals.</p>
+                    </div>
+                    <span class="text-xs px-3 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/30 font-medium">
+                        Authorized Manufacturer Session
+                    </span>
+                </div>
 
-                        <!-- Cryptographic Fingerprint Preview -->
-                        <div class="bg-sky-950/40 border border-sky-800/40 p-3.5 rounded-xl text-xs space-y-1.5">
-                            <div class="text-sky-300 font-semibold flex items-center gap-1.5">
-                                <i data-lucide="cpu" class="w-4 h-4"></i> Keccak-256 + Polynomial Checksum
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Registration Form -->
+                    <div class="glass-panel p-6 space-y-5 border-sky-500/20">
+                        <h3 class="font-bold text-white text-base flex items-center gap-2">
+                            <i data-lucide="plus-circle" class="text-sky-400 w-5 h-5"></i> Register & Mint Product NFT
+                        </h3>
+                        <form id="mfrRegisterForm" onsubmit="handleRegisterProduct(event)" class="space-y-4">
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1.5">Serial Number (Unique)</label>
+                                <input type="text" id="mfrSerial" placeholder="e.g. SN-APPLE-2026-X99" required
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
                             </div>
-                            <p class="text-slate-400 text-[11px]">Generates an EVM-verifiable non-SHA256 fingerprint hash on-chain.</p>
-                        </div>
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1.5">Model Name</label>
+                                <input type="text" id="mfrModel" placeholder="e.g. MacBook Pro M3 Max" required
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1.5">Brand</label>
+                                <input type="text" id="mfrBrand" placeholder="e.g. Apple Inc." required
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1.5">Warranty Period (Days)</label>
+                                <input type="number" id="mfrDuration" value="730" required
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
+                            </div>
 
-                        <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-semibold py-3 rounded-xl text-sm transition shadow-lg shadow-sky-600/20 flex items-center justify-center gap-2">
-                            <i data-lucide="sparkles" class="w-4 h-4"></i> Mint Digital Warranty NFT
-                        </button>
-                    </form>
-                </div>
+                            <div class="bg-sky-950/40 border border-sky-800/40 p-3.5 rounded-xl text-xs space-y-1.5">
+                                <div class="text-sky-300 font-semibold flex items-center gap-1.5">
+                                    <i data-lucide="cpu" class="w-4 h-4"></i> Keccak-256 + Polynomial Checksum
+                                </div>
+                                <p class="text-slate-400 text-[11px]">Generates an EVM-verifiable non-SHA256 fingerprint hash on-chain.</p>
+                            </div>
 
-                <!-- Catalog & Merkle Batch Tools -->
-                <div class="lg:col-span-2 space-y-8">
-                    <!-- Merkle Tree Batch Publisher Card -->
-                    <div class="glass-panel p-6 space-y-4">
-                        <div class="flex justify-between items-center">
-                            <h3 class="font-bold text-white text-base flex items-center gap-2">
-                                <i data-lucide="git-fork" class="text-emerald-400 w-5 h-5"></i> Merkle Tree Batch Root Publisher
-                            </h3>
-                            <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                                Cryptographic Batch Proof
-                            </span>
-                        </div>
-                        <form onsubmit="handlePublishMerkleRoot(event)" class="flex flex-col sm:flex-row gap-3">
-                            <input type="text" id="merkleRootInput" placeholder="Enter Merkle Tree Root Hash (0x...)" required
-                                class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
-                            <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition flex items-center justify-center gap-2">
-                                <i data-lucide="upload-cloud" class="w-4 h-4"></i> Commit Root
+                            <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-semibold py-3 rounded-xl text-sm transition shadow-lg shadow-sky-600/20 flex items-center justify-center gap-2">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i> Mint Digital Warranty NFT
                             </button>
                         </form>
                     </div>
 
-                    <!-- Registered Inventory Grid -->
-                    <div class="glass-panel p-6 space-y-4">
-                        <div class="flex justify-between items-center">
-                            <h3 class="font-bold text-white text-base">Registered Product Inventory</h3>
-                            <span id="mfrProductCount" class="text-xs text-slate-400">Total: 0</span>
+                    <!-- Catalog & Merkle Batch Tools -->
+                    <div class="lg:col-span-2 space-y-8">
+                        <div class="glass-panel p-6 space-y-4">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-bold text-white text-base flex items-center gap-2">
+                                    <i data-lucide="git-fork" class="text-emerald-400 w-5 h-5"></i> Merkle Tree Batch Root Publisher
+                                </h3>
+                                <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                                    Cryptographic Batch Proof
+                                </span>
+                            </div>
+                            <form onsubmit="handlePublishMerkleRoot(event)" class="flex flex-col sm:flex-row gap-3">
+                                <input type="text" id="merkleRootInput" placeholder="Enter Merkle Tree Root Hash (0x...)" required
+                                    class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+                                <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition flex items-center justify-center gap-2">
+                                    <i data-lucide="upload-cloud" class="w-4 h-4"></i> Commit Root
+                                </button>
+                            </form>
                         </div>
-                        
-                        <div id="mfrProductsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                        <div class="glass-panel p-6 space-y-4">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-bold text-white text-base">Registered Product Inventory</h3>
+                                <span id="mfrProductCount" class="text-xs text-slate-400">Total: 0</span>
+                            </div>
+                            <div id="mfrProductsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- Dynamic Cards -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CUSTOMER PORTAL TAB -->
+            <section id="portal-customer" class="portal-view space-y-8 hidden">
+                <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
+                            <i data-lucide="user-check" class="text-sky-400 w-6 h-6"></i> Customer Warranty Dashboard
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">Activate warranty coverage, file repair claims, and transfer second-hand ownership.</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="glass-panel p-6 space-y-4">
+                        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                            <i data-lucide="zap" class="text-amber-400 w-4 h-4"></i> Activate Warranty Coverage
+                        </h3>
+                        <form onsubmit="handleActivateWarranty(event)" class="space-y-3">
+                            <input type="text" id="custActivateProdId" placeholder="Product ID or Serial Number" required
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+                            <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2.5 rounded-xl text-sm transition">
+                                Activate Coverage
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="glass-panel p-6 space-y-4">
+                        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                            <i data-lucide="alert-circle" class="text-rose-400 w-4 h-4"></i> File Repair Claim Ticket
+                        </h3>
+                        <form onsubmit="handleFileClaim(event)" class="space-y-3">
+                            <input type="number" id="claimProdId" placeholder="Product ID" required
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500">
+                            <input type="text" id="claimIssue" placeholder="Issue Description" required
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500">
+                            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl text-sm transition">
+                                Submit Claim Ticket
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="glass-panel p-6 space-y-4">
+                        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                            <i data-lucide="arrow-right-left" class="text-purple-400 w-4 h-4"></i> Transfer Second-Hand NFT
+                        </h3>
+                        <form onsubmit="handleTransferOwnership(event)" class="space-y-3">
+                            <input type="number" id="transferProdId" placeholder="Product ID" required
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
+                            <input type="text" id="transferNewOwnerAddr" placeholder="Buyer Wallet Address (0x...)" required
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
+                            <button type="submit" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2.5 rounded-xl text-sm transition">
+                                Transfer Ownership
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-white text-base">My Digital Warranty Assets</h3>
+                        <span id="custWarrantyCount" class="text-xs text-slate-400">Total: 0</span>
+                    </div>
+                    <div id="custWarrantiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Dynamic Warranty Cards -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- SERVICE CENTER PORTAL TAB -->
+            <section id="portal-service" class="portal-view space-y-8 hidden">
+                <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
+                            <i data-lucide="wrench" class="text-amber-400 w-6 h-6"></i> Authorized Service Center Portal
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">Log maintenance, resolve open repair claim tickets, and complete service jobs on-chain.</p>
+                    </div>
+                    <span class="text-xs px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-medium">
+                        Authorized Service Center Session
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="glass-panel p-6 space-y-4 border-amber-500/20">
+                        <h3 class="font-bold text-white text-base flex items-center gap-2">
+                            <i data-lucide="file-plus" class="text-amber-400 w-5 h-5"></i> Log Maintenance & Repair
+                        </h3>
+                        <form onsubmit="handleLogRepair(event)" class="space-y-4">
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1">Product ID</label>
+                                <input type="number" id="scProdId" placeholder="e.g. 1" required
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1">Service Description</label>
+                                <textarea id="scDescription" rows="2" placeholder="e.g. Battery replacement & diagnostic" required
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500"></textarea>
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1">Parts Replaced</label>
+                                <input type="text" id="scParts" placeholder="e.g. Battery Module" required
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label class="text-xs text-slate-400 block mb-1">Service Cost (ETH)</label>
+                                <input type="text" id="scCost" placeholder="0.03" required
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+                            </div>
+
+                            <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-3 rounded-xl text-sm transition flex items-center justify-center gap-2">
+                                <i data-lucide="save" class="w-4 h-4"></i> Record Repair On-Chain
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="lg:col-span-2 glass-panel p-6 space-y-4">
+                        <h3 class="font-bold text-white text-base">On-Chain Maintenance & Claim History</h3>
+                        <div id="scRepairRecordsList" class="space-y-4">
                             <!-- Dynamic Cards -->
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
 
-        <!-- ========================================================= -->
-        <!-- 2. CUSTOMER PORTAL TAB -->
-        <!-- ========================================================= -->
-        <section id="portal-customer" class="portal-view space-y-8 hidden">
-            <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-slate-800 pb-4">
-                <div>
-                    <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
-                        <i data-lucide="user-check" class="text-sky-400 w-6 h-6"></i> Customer Warranty Dashboard
-                    </h2>
-                    <p class="text-xs text-slate-400 mt-1">Activate warranty coverage, file repair claims, purchase extended coverage, and transfer ownership.</p>
-                </div>
-            </div>
-
-            <!-- Quick Action Cards Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Activate Warranty Card -->
-                <div class="glass-panel p-6 space-y-4">
-                    <h3 class="font-bold text-white text-sm flex items-center gap-2">
-                        <i data-lucide="zap" class="text-amber-400 w-4 h-4"></i> Activate Warranty Coverage
-                    </h3>
-                    <form onsubmit="handleActivateWarranty(event)" class="space-y-3">
-                        <input type="text" id="custActivateProdId" placeholder="Product ID or Serial Number" required
-                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
-                        <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2.5 rounded-xl text-sm transition">
-                            Activate Coverage
-                        </button>
-                    </form>
-                </div>
-
-                <!-- File Warranty Claim Ticket -->
-                <div class="glass-panel p-6 space-y-4">
-                    <h3 class="font-bold text-white text-sm flex items-center gap-2">
-                        <i data-lucide="alert-circle" class="text-rose-400 w-4 h-4"></i> File Repair Claim Ticket
-                    </h3>
-                    <form onsubmit="handleFileClaim(event)" class="space-y-3">
-                        <input type="number" id="claimProdId" placeholder="Product ID" required
-                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500">
-                        <input type="text" id="claimIssue" placeholder="Issue Description (e.g. Screen glitch)" required
-                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500">
-                        <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl text-sm transition">
-                            Submit Claim Ticket
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Transfer Second-Hand Ownership Card -->
-                <div class="glass-panel p-6 space-y-4">
-                    <h3 class="font-bold text-white text-sm flex items-center gap-2">
-                        <i data-lucide="arrow-right-left" class="text-purple-400 w-4 h-4"></i> Transfer Second-Hand NFT
-                    </h3>
-                    <form onsubmit="handleTransferOwnership(event)" class="space-y-3">
-                        <input type="number" id="transferProdId" placeholder="Product ID" required
-                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
-                        <input type="text" id="transferNewOwnerAddr" placeholder="Buyer Wallet Address (0x...)" required
-                            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
-                        <button type="submit" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2.5 rounded-xl text-sm transition">
-                            Transfer Ownership
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Customer Warranties Grid -->
-            <div class="glass-panel p-6 space-y-4">
-                <div class="flex justify-between items-center">
-                    <h3 class="font-bold text-white text-base">My Digital Warranty Assets</h3>
-                    <span id="custWarrantyCount" class="text-xs text-slate-400">Total: 0</span>
-                </div>
-                <div id="custWarrantiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Dynamic Warranty Cards -->
-                </div>
-            </div>
-        </section>
-
-        <!-- ========================================================= -->
-        <!-- 3. SERVICE CENTER PORTAL TAB -->
-        <!-- ========================================================= -->
-        <section id="portal-service" class="portal-view space-y-8 hidden">
-            <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-slate-800 pb-4">
-                <div>
-                    <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
-                        <i data-lucide="wrench" class="text-amber-400 w-6 h-6"></i> Authorized Service Center Portal
-                    </h2>
-                    <p class="text-xs text-slate-400 mt-1">Log maintenance, resolve open repair claim tickets, and complete service jobs on-chain.</p>
-                </div>
-                <span class="text-xs px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-medium">
-                    Service Center ID: SC-9988
-                </span>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Log Maintenance Form -->
-                <div class="glass-panel p-6 space-y-4 border-amber-500/20">
-                    <h3 class="font-bold text-white text-base flex items-center gap-2">
-                        <i data-lucide="file-plus" class="text-amber-400 w-5 h-5"></i> Log Maintenance & Repair
-                    </h3>
-                    <form onsubmit="handleLogRepair(event)" class="space-y-4">
-                        <div>
-                            <label class="text-xs text-slate-400 block mb-1">Product ID</label>
-                            <input type="number" id="scProdId" placeholder="e.g. 1" required
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
-                        </div>
-                        <div>
-                            <label class="text-xs text-slate-400 block mb-1">Service Description</label>
-                            <textarea id="scDescription" rows="2" placeholder="e.g. Battery replacement & diagnostic" required
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500"></textarea>
-                        </div>
-                        <div>
-                            <label class="text-xs text-slate-400 block mb-1">Parts Replaced</label>
-                            <input type="text" id="scParts" placeholder="e.g. Battery Module" required
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
-                        </div>
-                        <div>
-                            <label class="text-xs text-slate-400 block mb-1">Service Cost (ETH)</label>
-                            <input type="text" id="scCost" placeholder="0.03" required
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
-                        </div>
-
-                        <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-3 rounded-xl text-sm transition flex items-center justify-center gap-2">
-                            <i data-lucide="save" class="w-4 h-4"></i> Record Repair On-Chain
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Service Logs Feed -->
-                <div class="lg:col-span-2 glass-panel p-6 space-y-4">
-                    <h3 class="font-bold text-white text-base">On-Chain Maintenance & Claim History</h3>
-                    <div id="scRepairRecordsList" class="space-y-4">
-                        <!-- Dynamic Repair Log Cards -->
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ========================================================= -->
-        <!-- 4. PUBLIC VERIFIER PORTAL TAB -->
-        <!-- ========================================================= -->
-        <section id="portal-verifier" class="portal-view space-y-8 hidden">
-            <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-slate-800 pb-4">
-                <div>
-                    <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
-                        <i data-lucide="qr-code" class="text-emerald-400 w-6 h-6"></i> Public Authenticity & Fraud Inspector
-                    </h2>
-                    <p class="text-xs text-slate-400 mt-1">Verify non-SHA256 fingerprint hashes, inspect Merkle batch roots, and generate printable digital warranty certificates.</p>
-                </div>
-            </div>
-
-            <!-- Search Bar -->
-            <div class="glass-panel p-5">
-                <form onsubmit="handlePublicLookup(event)" class="flex flex-col sm:flex-row gap-4">
-                    <div class="relative flex-1">
-                        <i data-lucide="search" class="w-5 h-5 absolute left-4 top-3.5 text-slate-400"></i>
-                        <input type="text" id="verifierQuery" placeholder="Enter Product ID or Serial Number (e.g. 1 or SN-APPLE-2026-X99)" required
-                            class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-sky-500">
-                    </div>
-                    <button type="submit" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold px-8 py-3 rounded-xl text-sm transition flex items-center justify-center gap-2">
-                        <i data-lucide="shield-check" class="w-4 h-4"></i> Inspect Product
-                    </button>
-                </form>
-            </div>
-
-            <!-- Verification Results Display -->
-            <div id="verifierResults" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- QR Code & Fraud Score Card -->
-                <div class="glass-panel p-6 flex flex-col items-center justify-center text-center space-y-5">
-                    <div id="qrcodeContainer" class="p-4 bg-white rounded-2xl shadow-xl flex items-center justify-center min-h-[160px] min-w-[160px]">
-                        <!-- QR Code Canvas -->
-                    </div>
+            <!-- PUBLIC VERIFIER PORTAL TAB -->
+            <section id="portal-verifier" class="portal-view space-y-8 hidden">
+                <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-slate-800 pb-4">
                     <div>
-                        <h4 id="vProdTitle" class="font-bold text-white text-base">Select a Product</h4>
-                        <p id="vProdSub" class="text-xs text-slate-400 mt-1">Scan QR Code for digital warranty proof</p>
-                    </div>
-
-                    <!-- Fraud Score Gauge -->
-                    <div class="w-full bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 text-xs space-y-1.5">
-                        <div class="flex justify-between text-slate-300 font-semibold">
-                            <span>Authenticity Health Index:</span>
-                            <span id="vFraudScore" class="text-emerald-400 font-bold">100% Genuine</span>
-                        </div>
-                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                            <div id="vScoreBar" class="bg-emerald-400 h-full w-full"></div>
-                        </div>
-                    </div>
-
-                    <button onclick="openPrintableCertificate()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2">
-                        <i data-lucide="printer" class="w-4 h-4"></i> Generate Printable Certificate
-                    </button>
-                </div>
-
-                <!-- Hash Details & Timeline -->
-                <div class="lg:col-span-2 space-y-6">
-                    <!-- Non-SHA256 Fingerprint Card -->
-                    <div class="glass-panel p-6 space-y-3">
-                        <h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-2">
-                            <i data-lucide="fingerprint" class="w-4 h-4"></i> Non-SHA256 Cryptographic Fingerprint (Keccak-Polynomial)
-                        </h4>
-                        <div id="vCustomHash" class="hash-code-box">
-                            0x0000000000000000000000000000000000000000000000000000000000000000
-                        </div>
-                        <p class="text-[11px] text-slate-400">
-                            ✓ Verified on Ethereum Virtual Machine. Any alteration to product specifications invalidates this fingerprint.
-                        </p>
-                    </div>
-
-                    <!-- Lifecycle Timeline -->
-                    <div class="glass-panel p-6 space-y-4">
-                        <h4 class="font-bold text-white text-base flex items-center gap-2">
-                            <i data-lucide="history" class="text-sky-400 w-5 h-5"></i> Immutable Product Lifecycle History
-                        </h4>
-                        <div id="vTimeline" class="space-y-4">
-                            <!-- Dynamic Timeline Items -->
-                        </div>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
+                            <i data-lucide="qr-code" class="text-emerald-400 w-6 h-6"></i> Public Authenticity & Fraud Inspector
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">Verify non-SHA256 fingerprint hashes, inspect Merkle batch roots, and generate printable digital warranty certificates.</p>
                     </div>
                 </div>
-            </div>
-        </section>
 
-    </main>
-
-    <!-- ========================================================= -->
-    <!-- AUTHENTICATION CREDENTIALS MODAL -->
-    <!-- ========================================================= -->
-    <div id="authModal" class="hidden fixed inset-0 z-50 auth-overlay flex items-center justify-center p-4">
-        <div class="glass-panel p-8 max-w-md w-full space-y-6 relative border-sky-500/30">
-            <button onclick="closeAuthModal()" class="absolute right-4 top-4 text-slate-400 hover:text-white">&times;</button>
-            
-            <div class="space-y-1">
-                <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i data-lucide="lock" class="text-sky-400 w-5 h-5"></i> Authenticate Credentials
-                </h3>
-                <p class="text-xs text-slate-400">Select your role and enter security passcodes to unlock restricted portals.</p>
-            </div>
-
-            <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
-                <div>
-                    <label class="text-xs text-slate-400 block mb-1">Select Role</label>
-                    <select id="authRoleSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
-                        <option value="manufacturer">Manufacturer (MFR-SEC-2026-KEY)</option>
-                        <option value="service">Service Center (SC-AUTH-9988-SEC)</option>
-                        <option value="customer">Customer / Owner</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="text-xs text-slate-400 block mb-1">Security Passcode / Secret Key</label>
-                    <input type="password" id="authPasscode" placeholder="Enter key (e.g. MFR-SEC-2026-KEY)" required
-                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
+                <div class="glass-panel p-5">
+                    <form onsubmit="handlePublicLookup(event)" class="flex flex-col sm:flex-row gap-4">
+                        <div class="relative flex-1">
+                            <i data-lucide="search" class="w-5 h-5 absolute left-4 top-3.5 text-slate-400"></i>
+                            <input type="text" id="verifierQuery" placeholder="Enter Product ID or Serial Number (e.g. 1 or SN-APPLE-2026-X99)" required
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-sky-500">
+                        </div>
+                        <button type="submit" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold px-8 py-3 rounded-xl text-sm transition flex items-center justify-center gap-2">
+                            <i data-lucide="shield-check" class="w-4 h-4"></i> Inspect Product
+                        </button>
+                    </form>
                 </div>
 
-                <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                    <p class="font-semibold text-slate-300">Default Demo Keys:</p>
-                    <p>• Manufacturer Key: <code class="text-sky-300">MFR-SEC-2026-KEY</code></p>
-                    <p>• Service Center Key: <code class="text-amber-300">SC-AUTH-9988-SEC</code></p>
-                    <p>• Customer: Enter any 4-digit PIN (e.g. <code class="text-emerald-300">1234</code>)</p>
-                </div>
+                <div id="verifierResults" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="glass-panel p-6 flex flex-col items-center justify-center text-center space-y-5">
+                        <div id="qrcodeContainer" class="p-4 bg-white rounded-2xl shadow-xl flex items-center justify-center min-h-[160px] min-w-[160px]">
+                            <!-- QR Code Canvas -->
+                        </div>
+                        <div>
+                            <h4 id="vProdTitle" class="font-bold text-white text-base">Select a Product</h4>
+                            <p id="vProdSub" class="text-xs text-slate-400 mt-1">Scan QR Code for digital warranty proof</p>
+                        </div>
 
-                <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-semibold py-3 rounded-xl text-sm transition shadow-lg shadow-sky-600/20">
-                    Authenticate & Unlock Portal
-                </button>
-            </form>
-        </div>
+                        <div class="w-full bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 text-xs space-y-1.5">
+                            <div class="flex justify-between text-slate-300 font-semibold">
+                                <span>Authenticity Health Index:</span>
+                                <span id="vFraudScore" class="text-emerald-400 font-bold">100% Genuine</span>
+                            </div>
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                <div id="vScoreBar" class="bg-emerald-400 h-full w-full"></div>
+                            </div>
+                        </div>
+
+                        <button onclick="openPrintableCertificate()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2">
+                            <i data-lucide="printer" class="w-4 h-4"></i> Generate Printable Certificate
+                        </button>
+                    </div>
+
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="glass-panel p-6 space-y-3">
+                            <h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-2">
+                                <i data-lucide="fingerprint" class="w-4 h-4"></i> Non-SHA256 Cryptographic Fingerprint (Keccak-Polynomial)
+                            </h4>
+                            <div id="vCustomHash" class="hash-code-box">
+                                0x0000000000000000000000000000000000000000000000000000000000000000
+                            </div>
+                            <p class="text-[11px] text-slate-400">
+                                ✓ Verified on Ethereum Virtual Machine. Any alteration to product specifications invalidates this fingerprint.
+                            </p>
+                        </div>
+
+                        <div class="glass-panel p-6 space-y-4">
+                            <h4 class="font-bold text-white text-base flex items-center gap-2">
+                                <i data-lucide="history" class="text-sky-400 w-5 h-5"></i> Immutable Product Lifecycle History
+                            </h4>
+                            <div id="vTimeline" class="space-y-4">
+                                <!-- Dynamic Timeline Items -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
     </div>
 
-    <!-- ========================================================= -->
     <!-- PRINTABLE DIGITAL CERTIFICATE MODAL -->
-    <!-- ========================================================= -->
     <div id="printableCertificateModal" class="hidden fixed inset-0 z-50 auth-overlay flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-sky-500/40 p-8 rounded-2xl max-w-2xl w-full space-y-6 text-white relative">
             <button onclick="closePrintableCertificate()" class="absolute right-4 top-4 text-slate-400 hover:text-white">&times;</button>
@@ -472,8 +463,7 @@
 
             <div class="flex justify-between items-center pt-2">
                 <div class="text-[10px] text-slate-500">
-                    Verified on Ethereum Virtual Machine<br>
-                    VIT Project Team: R ALWIN EBENEZER & R PRAJIT
+                    Verified on Ethereum Virtual Machine Architecture
                 </div>
                 <button onclick="window.print()" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold px-6 py-2 rounded-xl text-xs transition">
                     Print / Save as PDF

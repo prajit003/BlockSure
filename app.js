@@ -1,13 +1,12 @@
 /**
  * BlockSure Enterprise - Decentralized Electronic Warranty & Ownership System
- * Author: R ALWIN EBENEZER (25BCE5056) & R PRAJIT (25BCE5022) - VIT
  */
 
 // Global State
 const state = {
     auth: {
-        currentRole: 'manufacturer', // 'manufacturer', 'service', 'customer', 'guest'
-        isAuthenticated: true,
+        currentRole: null,
+        isAuthenticated: false,
         credentials: {
             manufacturer: 'MFR-SEC-2026-KEY',
             service: 'SC-AUTH-9988-SEC',
@@ -133,6 +132,74 @@ function calculateCustomHash(serialNumber, modelName, mfrAddr, regTime) {
     return keccakHash.slice(0, 58) + polyHex;
 }
 
+// ------------------------------------------------------------------
+// LOGIN SCREEN & MANDATORY AUTHENTICATION HANDLERS
+// ------------------------------------------------------------------
+function updatePasscodePlaceholder() {
+    const role = document.getElementById('loginRoleSelect').value;
+    const passcodeGroup = document.getElementById('passcodeGroup');
+    const passInput = document.getElementById('loginPasscode');
+
+    if (role === 'verifier') {
+        passcodeGroup.classList.add('hidden');
+        passInput.removeAttribute('required');
+    } else {
+        passcodeGroup.classList.remove('hidden');
+        passInput.setAttribute('required', 'true');
+        if (role === 'manufacturer') {
+            passInput.placeholder = "Enter Key (MFR-SEC-2026-KEY)";
+        } else if (role === 'service') {
+            passInput.placeholder = "Enter Key (SC-AUTH-9988-SEC)";
+        } else {
+            passInput.placeholder = "Enter PIN (e.g. 1234)";
+        }
+    }
+}
+
+function handleLoginSubmit(e) {
+    e.preventDefault();
+    const role = document.getElementById('loginRoleSelect').value;
+    const passcode = document.getElementById('loginPasscode').value.trim();
+
+    if (role === 'verifier') {
+        launchDashboard('verifier', 'Public Inspector (Guest)');
+        return;
+    }
+
+    const expectedKey = state.auth.credentials[role];
+    if (passcode === expectedKey || role === 'customer') {
+        const labels = {
+            manufacturer: 'Manufacturer Portal',
+            service: 'Authorized Service Center',
+            customer: 'Customer & Owner'
+        };
+        launchDashboard(role, labels[role]);
+    } else {
+        alert("Invalid Security Passcode / Key!");
+    }
+}
+
+function launchDashboard(role, label) {
+    state.auth.currentRole = role;
+    state.auth.isAuthenticated = true;
+
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('mainDashboard').classList.remove('hidden');
+    document.getElementById('activeRoleLabel').innerText = label;
+
+    switchTab(role === 'service' ? 'service' : role === 'customer' ? 'customer' : role === 'verifier' ? 'verifier' : 'manufacturer');
+    renderAll();
+    showToast(`Authenticated! Welcome to ${label}.`, "success");
+}
+
+function handleLogout() {
+    state.auth.currentRole = null;
+    state.auth.isAuthenticated = false;
+
+    document.getElementById('mainDashboard').classList.add('hidden');
+    document.getElementById('loginScreen').classList.remove('hidden');
+}
+
 // Global View Renderer
 function renderAll() {
     renderManufacturerPortal();
@@ -159,43 +226,7 @@ function switchTab(tabName) {
 }
 
 // ------------------------------------------------------------------
-// AUTHENTICATION MODAL & CREDENTIAL MANAGEMENT
-// ------------------------------------------------------------------
-function openAuthModal() {
-    document.getElementById('authModal').classList.remove('hidden');
-}
-
-function closeAuthModal() {
-    document.getElementById('authModal').classList.add('hidden');
-}
-
-function handleAuthSubmit(e) {
-    e.preventDefault();
-    const role = document.getElementById('authRoleSelect').value;
-    const key = document.getElementById('authPasscode').value.trim();
-
-    const expectedKey = state.auth.credentials[role];
-    if (key === expectedKey || role === 'customer') {
-        state.auth.currentRole = role;
-        state.auth.isAuthenticated = true;
-
-        const roleLabels = {
-            manufacturer: 'Manufacturer (MFR-SEC-2026-KEY)',
-            service: 'Authorized Service Center (SC-9988)',
-            customer: 'Customer / Owner'
-        };
-        document.getElementById('activeRoleLabel').innerText = roleLabels[role];
-
-        closeAuthModal();
-        switchTab(role === 'service' ? 'service' : role === 'customer' ? 'customer' : 'manufacturer');
-        showToast(`Authenticated as ${role.toUpperCase()}! Portal unlocked.`, "success");
-    } else {
-        showToast("Invalid Security Passcode / Secret Key!", "error");
-    }
-}
-
-// ------------------------------------------------------------------
-// 1. MANUFACTURER PORTAL
+// MANUFACTURER PORTAL
 // ------------------------------------------------------------------
 function renderManufacturerPortal() {
     const grid = document.getElementById('mfrProductsGrid');
@@ -277,7 +308,7 @@ function handlePublishMerkleRoot(e) {
 }
 
 // ------------------------------------------------------------------
-// 2. CUSTOMER PORTAL
+// CUSTOMER PORTAL
 // ------------------------------------------------------------------
 function renderCustomerPortal() {
     const grid = document.getElementById('custWarrantiesGrid');
@@ -396,7 +427,7 @@ function handleTransferOwnership(e) {
 }
 
 // ------------------------------------------------------------------
-// 3. SERVICE CENTER PORTAL
+// SERVICE CENTER PORTAL
 // ------------------------------------------------------------------
 function renderServiceCenterPortal() {
     const list = document.getElementById('scRepairRecordsList');
@@ -460,7 +491,7 @@ function handleLogRepair(e) {
 }
 
 // ------------------------------------------------------------------
-// 4. PUBLIC VERIFIER PORTAL & CERTIFICATE GENERATOR
+// PUBLIC VERIFIER PORTAL & CERTIFICATE GENERATOR
 // ------------------------------------------------------------------
 function handlePublicLookup(e) {
     e.preventDefault();
