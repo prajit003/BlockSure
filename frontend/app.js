@@ -5,12 +5,13 @@
 // Global State
 const state = {
     auth: {
+        targetRole: null,
         currentRole: null,
         isAuthenticated: false,
         credentials: {
-            manufacturer: 'MFR-SEC-2026-KEY',
-            service: 'SC-AUTH-9988-SEC',
-            customer: '1234'
+            manufacturer: { user: 'mfr', pass: 'MFR-SEC-2026-KEY' },
+            service: { user: 'service', pass: 'SC-AUTH-9988-SEC' },
+            customer: { user: 'customer', pass: '1234' }
         }
     },
     accounts: {
@@ -111,12 +112,11 @@ const state = {
 let selectedProductForInspect = null;
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Generate custom hashes
+    // Calculate custom non-SHA256 hashes
     state.products.forEach(p => {
         p.customHash = calculateCustomHash(p.serialNumber, p.modelName, p.manufacturer, p.registrationTimestamp);
     });
 
-    renderAll();
     lucide.createIcons();
 });
 
@@ -133,74 +133,97 @@ function calculateCustomHash(serialNumber, modelName, mfrAddr, regTime) {
 }
 
 // ------------------------------------------------------------------
-// LOGIN SCREEN & MANDATORY AUTHENTICATION HANDLERS
+// VTOP-STYLE LOGIN & MODAL HANDLERS
 // ------------------------------------------------------------------
-function updatePasscodePlaceholder() {
-    const role = document.getElementById('loginRoleSelect').value;
-    const passcodeGroup = document.getElementById('passcodeGroup');
-    const passInput = document.getElementById('loginPasscode');
+function openLoginModal(role) {
+    state.auth.targetRole = role;
+    const modal = document.getElementById('loginModal');
+    const title = document.getElementById('loginModalTitle');
+    const userInput = document.getElementById('loginUsername');
+    const passGroup = document.getElementById('passwordFieldGroup');
+    const passInput = document.getElementById('loginPassword');
+
+    const titles = {
+        manufacturer: '🏭 Manufacturer Portal Login',
+        service: '🛠️ Service Center Login',
+        customer: '👤 Customer Portal Login',
+        verifier: '🔍 Public Inspector Access'
+    };
+
+    title.innerText = titles[role];
+    userInput.value = role === 'verifier' ? 'guest' : state.auth.credentials[role] ? state.auth.credentials[role].user : role;
 
     if (role === 'verifier') {
-        passcodeGroup.classList.add('hidden');
+        passGroup.classList.add('hidden');
         passInput.removeAttribute('required');
     } else {
-        passcodeGroup.classList.remove('hidden');
+        passGroup.classList.remove('hidden');
         passInput.setAttribute('required', 'true');
-        if (role === 'manufacturer') {
-            passInput.placeholder = "Enter Key (MFR-SEC-2026-KEY)";
-        } else if (role === 'service') {
-            passInput.placeholder = "Enter Key (SC-AUTH-9988-SEC)";
-        } else {
-            passInput.placeholder = "Enter PIN (e.g. 1234)";
-        }
+        passInput.value = state.auth.credentials[role] ? state.auth.credentials[role].pass : '';
     }
+
+    modal.classList.remove('hidden');
+    lucide.createIcons();
+}
+
+function closeLoginModal() {
+    document.getElementById('loginModal').classList.add('hidden');
 }
 
 function handleLoginSubmit(e) {
     e.preventDefault();
-    const role = document.getElementById('loginRoleSelect').value;
-    const passcode = document.getElementById('loginPasscode').value.trim();
+    const role = state.auth.targetRole;
+    const user = document.getElementById('loginUsername').value.trim();
+    const pass = document.getElementById('loginPassword').value.trim();
 
     if (role === 'verifier') {
-        launchDashboard('verifier', 'Public Inspector (Guest)');
+        launchApplication('verifier', 'Public Inspector');
         return;
     }
 
-    const expectedKey = state.auth.credentials[role];
-    if (passcode === expectedKey || role === 'customer') {
+    const creds = state.auth.credentials[role];
+    if (creds && ((user.toLowerCase() === creds.user || user.toLowerCase() === role) && pass === creds.pass)) {
         const labels = {
             manufacturer: 'Manufacturer Portal',
             service: 'Authorized Service Center',
             customer: 'Customer & Owner'
         };
-        launchDashboard(role, labels[role]);
+        launchApplication(role, labels[role]);
     } else {
-        alert("Invalid Security Passcode / Key!");
+        alert("Invalid Username or Security Password!");
     }
 }
 
-function launchDashboard(role, label) {
+function launchApplication(role, label) {
     state.auth.currentRole = role;
     state.auth.isAuthenticated = true;
 
-    document.getElementById('loginScreen').classList.add('hidden');
+    closeLoginModal();
+    document.getElementById('portalSelectorScreen').classList.add('hidden');
     document.getElementById('mainDashboard').classList.remove('hidden');
-    document.getElementById('activeRoleLabel').innerText = label;
+    document.getElementById('headerUserSession').classList.remove('hidden');
+    document.getElementById('headerUserSession').classList.add('flex');
+    document.getElementById('activeUserLabel').innerText = label;
 
-    switchTab(role === 'service' ? 'service' : role === 'customer' ? 'customer' : role === 'verifier' ? 'verifier' : 'manufacturer');
     renderAll();
+    switchTab(role);
     showToast(`Authenticated! Welcome to ${label}.`, "success");
 }
 
 function handleLogout() {
+    state.auth.targetRole = null;
     state.auth.currentRole = null;
     state.auth.isAuthenticated = false;
 
     document.getElementById('mainDashboard').classList.add('hidden');
-    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('headerUserSession').classList.add('hidden');
+    document.getElementById('headerUserSession').classList.remove('flex');
+    document.getElementById('portalSelectorScreen').classList.remove('hidden');
 }
 
-// Global View Renderer
+// ------------------------------------------------------------------
+// GLOBAL RENDER & TAB SWITCHER
+// ------------------------------------------------------------------
 function renderAll() {
     renderManufacturerPortal();
     renderCustomerPortal();
@@ -210,13 +233,15 @@ function renderAll() {
     }
 }
 
-// Tab Switcher
 function switchTab(tabName) {
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.portal-view').forEach(v => v.classList.add('hidden'));
 
-    document.getElementById(`tab-${tabName}`).classList.add('active');
-    document.getElementById(`portal-${tabName}`).classList.remove('hidden');
+    const tabBtn = document.getElementById(`tab-${tabName}`);
+    const portalView = document.getElementById(`portal-${tabName}`);
+
+    if (tabBtn) tabBtn.classList.add('active');
+    if (portalView) portalView.classList.remove('hidden');
 
     if (tabName === 'verifier' && state.products.length > 0) {
         renderVerifierPortal(selectedProductForInspect || state.products[0]);
@@ -230,6 +255,7 @@ function switchTab(tabName) {
 // ------------------------------------------------------------------
 function renderManufacturerPortal() {
     const grid = document.getElementById('mfrProductsGrid');
+    if (!grid) return;
     document.getElementById('mfrProductCount').innerText = `Total Minted: ${state.products.length}`;
 
     grid.innerHTML = state.products.map(p => `
@@ -312,6 +338,7 @@ function handlePublishMerkleRoot(e) {
 // ------------------------------------------------------------------
 function renderCustomerPortal() {
     const grid = document.getElementById('custWarrantiesGrid');
+    if (!grid) return;
     document.getElementById('custWarrantyCount').innerText = `Assets: ${state.products.length}`;
 
     grid.innerHTML = state.products.map(p => `
@@ -431,6 +458,7 @@ function handleTransferOwnership(e) {
 // ------------------------------------------------------------------
 function renderServiceCenterPortal() {
     const list = document.getElementById('scRepairRecordsList');
+    if (!list) return;
     const logs = [];
 
     Object.keys(state.repairs).forEach(id => {
@@ -520,19 +548,23 @@ function renderVerifierPortal(prod) {
 
     // QR Code
     const container = document.getElementById('qrcodeContainer');
-    container.innerHTML = '';
-    if (typeof QRCode !== 'undefined') {
-        new QRCode(container, {
-            text: JSON.stringify({ id: prod.id, sn: prod.serialNumber, hash: prod.customHash }),
-            width: 140,
-            height: 140,
-            colorDark: "#090d16",
-            colorLight: "#ffffff"
-        });
+    if (container) {
+        container.innerHTML = '';
+        if (typeof QRCode !== 'undefined') {
+            new QRCode(container, {
+                text: JSON.stringify({ id: prod.id, sn: prod.serialNumber, hash: prod.customHash }),
+                width: 140,
+                height: 140,
+                colorDark: "#090d16",
+                colorLight: "#ffffff"
+            });
+        }
     }
 
     // Render Timeline
     const timeline = document.getElementById('vTimeline');
+    if (!timeline) return;
+
     const items = [
         { title: "Minted & Registered by Manufacturer", desc: `Registered on-chain by ${prod.manufacturer.substring(0, 8)}...`, time: prod.registrationTimestamp, icon: "factory", color: "text-sky-400" }
     ];
@@ -604,6 +636,7 @@ function getStatusBadge(status) {
 
 function showToast(msg, type = 'info') {
     const toast = document.getElementById('toast');
+    if (!toast) return;
     document.getElementById('toastMsg').innerText = msg;
     toast.className = `p-4 rounded-2xl border text-sm flex items-center justify-between transition-all flex ${
         type === 'success' ? 'bg-emerald-950/90 border-emerald-700 text-emerald-200' :
@@ -613,5 +646,6 @@ function showToast(msg, type = 'info') {
 }
 
 function hideToast() {
-    document.getElementById('toast').classList.add('hidden');
+    const toast = document.getElementById('toast');
+    if (toast) toast.classList.add('hidden');
 }
