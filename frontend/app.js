@@ -406,6 +406,10 @@ async function setupConnectedAccount(address, isSimulated = false) {
 // LOGIN MODAL & AUTHENTICATION
 // ------------------------------------------------------------------
 function openLoginModal(role) {
+    if (role === 'verifier') {
+        launchApplication('verifier', 'Public Inspector');
+        return;
+    }
     state.auth.targetRole = role;
     const modal = document.getElementById('loginModal');
     const title = document.getElementById('loginModalTitle');
@@ -422,15 +426,10 @@ function openLoginModal(role) {
 
     title.innerText = titles[role] || 'Portal Login';
     const creds = state.auth.credentials[role];
-    userInput.value = role === 'verifier' ? 'guest' : (creds ? creds.user : role);
+    userInput.value = creds ? creds.user : role;
 
-    if (role === 'verifier') {
-        passGroup.classList.add('hidden');
-        passInput.value = '';
-    } else {
-        passGroup.classList.remove('hidden');
-        passInput.value = creds ? creds.pass : '';
-    }
+    passGroup.classList.remove('hidden');
+    passInput.value = creds ? creds.pass : '';
 
     modal.classList.remove('hidden');
     safeCreateIcons();
@@ -993,8 +992,7 @@ function quickInspect(id) {
     const prod = state.products.find(p => p.id === id);
     if (prod) {
         selectedProductForInspect = prod;
-        switchTab('verifier');
-        renderVerifierPortal(prod);
+        openPrintableCertificate();
     }
 }
 
