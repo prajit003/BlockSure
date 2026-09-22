@@ -410,9 +410,16 @@ function renderManufacturerPortal() {
                     <span>Serial:</span>
                     <span class="text-white">${p.serialNumber}</span>
                 </div>
-                <div class="flex justify-between text-slate-400">
+                <div class="flex items-center justify-between text-slate-400">
                     <span>Fingerprint:</span>
-                    <span class="text-sky-300">${p.customHash.substring(0, 10)}...</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-sky-300 font-mono text-[11px]" title="${p.customHash}">${p.customHash.substring(0, 10)}...</span>
+                        <button onclick="copyAndPasteToMerkleInput('${p.customHash}', ${p.id})" 
+                            class="px-2 py-0.5 rounded bg-sky-950 hover:bg-sky-800 text-sky-300 border border-sky-700/50 text-[10px] font-sans flex items-center gap-1 transition shadow-sm"
+                            title="Copy fingerprint to clipboard & auto-paste into Merkle Root Commit">
+                            <i data-lucide="copy" class="w-3 h-3"></i> Copy to Merkle
+                        </button>
+                    </div>
                 </div>
                 <div class="flex justify-between text-slate-400 pt-1 border-t border-slate-800">
                     <span>Sepolia Tx:</span>
@@ -476,6 +483,120 @@ function handlePublishMerkleRoot(e) {
     const txHash = generateSepoliaTxHash();
     document.getElementById('merkleRootInput').value = '';
     showToast("Merkle Tree Batch Root committed to Sepolia Testnet!", "success", txHash);
+}
+
+// ------------------------------------------------------------------
+// CLIPBOARD & MERKLE ROOT AUTOMATION HELPERS
+// ------------------------------------------------------------------
+
+// 1. Copy fingerprint hash to clipboard and auto-paste directly into Merkle Root input
+async function copyAndPasteToMerkleInput(hash, productId) {
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(hash);
+        } else {
+            const tempInput = document.createElement("input");
+            tempInput.value = hash;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+        }
+    } catch (err) {
+        console.log("Clipboard write notice:", err);
+    }
+
+    // Auto-fill into the Merkle Root input box
+    const inputEl = document.getElementById('merkleRootInput');
+    if (inputEl) {
+        inputEl.value = hash;
+        
+        // Add visual flash glow effect
+        inputEl.classList.remove('border-slate-700');
+        inputEl.classList.add('border-emerald-400', 'ring-2', 'ring-emerald-400/40', 'bg-emerald-950/40');
+        setTimeout(() => {
+            inputEl.classList.remove('border-emerald-400', 'ring-2', 'ring-emerald-400/40', 'bg-emerald-950/40');
+            inputEl.classList.add('border-slate-700');
+        }, 1800);
+
+        inputEl.focus();
+
+        // Smooth scroll up to the Merkle Root commit space
+        inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    showToast(`📋 Copied Product #${productId} fingerprint to clipboard and auto-filled Merkle Root!`, "success");
+}
+
+// 2. Paste from clipboard into the Merkle input box
+async function pasteClipboardToMerkleInput() {
+    const inputEl = document.getElementById('merkleRootInput');
+    if (!inputEl) return;
+    
+    try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            const text = await navigator.clipboard.readText();
+            if (text && text.trim().length > 0) {
+                inputEl.value = text.trim();
+                inputEl.classList.add('border-emerald-400');
+                setTimeout(() => inputEl.classList.remove('border-emerald-400'), 1500);
+                showToast("📋 Pasted hash from clipboard into Merkle Root field!", "info");
+                return;
+            }
+        }
+    } catch (e) {
+        console.log("Clipboard read blocked, using fallback:", e);
+    }
+
+    // Fallback: use first product's hash if clipboard access is denied by browser permissions
+    if (state.products.length > 0) {
+        inputEl.value = state.products[0].customHash;
+        showToast("📋 Auto-filled with latest product fingerprint hash!", "info");
+    }
+}
+
+// 3. Compute combined Batch Merkle Tree Root from all registered products
+function autoComputeAllProductsMerkleRoot() {
+    const inputEl = document.getElementById('merkleRootInput');
+    if (!inputEl) return;
+
+    if (!state.products || state.products.length === 0) {
+        showToast("No registered products available.", "error");
+        return;
+    }
+
+    // Merkle tree hashing of all product leaves
+    let leaves = state.products.map(p => p.customHash);
+    
+    while (leaves.length > 1) {
+        let nextLevel = [];
+        for (let i = 0; i < leaves.length; i += 2) {
+            if (i + 1 < leaves.length) {
+                // EVM-compatible pairwise Keccak-256 hash
+                const combined = ethers.keccak256(ethers.concat([ethers.getBytes(leaves[i]), ethers.getBytes(leaves[i + 1])]));
+                nextLevel.push(combined);
+            } else {
+                nextLevel.push(leaves[i]);
+            }
+        }
+        leaves = nextLevel;
+    }
+
+    const computedRoot = leaves[0];
+    inputEl.value = computedRoot;
+
+    // Flash highlight
+    inputEl.classList.add('border-emerald-400', 'ring-2', 'ring-emerald-400/40', 'bg-emerald-950/40');
+    setTimeout(() => {
+        inputEl.classList.remove('border-emerald-400', 'ring-2', 'ring-emerald-400/40', 'bg-emerald-950/40');
+    }, 1800);
+
+    // Also copy to clipboard
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(computedRoot).catch(() => {});
+    }
+
+    showToast(`🌳 Computed Batch Merkle Root for all ${state.products.length} products & auto-filled!`, "success");
 }
 
 // ------------------------------------------------------------------
