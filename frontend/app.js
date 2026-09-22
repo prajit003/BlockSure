@@ -415,6 +415,26 @@ async function connectSepoliaWallet() {
         return;
     }
 
+    // If already connected, clicking button triggers MetaMask account switch chooser
+    if (state.web3.isMetaMaskConnected) {
+        try {
+            await ethereum.request({
+                method: 'wallet_requestPermissions',
+                params: [{ eth_accounts: {} }]
+            });
+            const accounts = await ethereum.request({ method: 'eth_accounts' });
+            if (accounts && accounts.length > 0) {
+                await setupConnectedAccount(accounts[0], false);
+                showToast(`Switched account to ${accounts[0].substring(0, 6)}...${accounts[0].substring(38)}`, "success");
+                return;
+            }
+        } catch (e) {
+            console.log("Permission prompt response:", e);
+            await checkActiveAccountAndBalance();
+            return;
+        }
+    }
+
     const btnText = document.getElementById('walletBtnText');
     if (btnText) btnText.innerText = "Connecting...";
 
