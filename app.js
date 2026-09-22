@@ -68,6 +68,21 @@ const state = {
             status: "InRepair",
             customHash: "",
             merkleRoot: "0x892a3c7f66e01a2233445566778899aabbccddeeff00112233445566778899aa"
+        },
+        {
+            id: 4,
+            serialNumber: "SN-SAMSUNG-2026-B47",
+            modelName: "Galaxy Book5 Pro",
+            brand: "Samsung Electronics",
+            manufacturer: "0x1111111111111111111111111111111111111111",
+            currentOwner: "0x1111111111111111111111111111111111111111",
+            registrationTimestamp: Date.now() - 1 * 86400 * 1000,
+            warrantyDurationDays: 730,
+            warrantyStartTimestamp: 0,
+            isActivated: false,
+            status: "Registered",
+            customHash: "",
+            merkleRoot: "0x892a3c7f66e01a2233445566778899aabbccddeeff00112233445566778899aa"
         }
     ],
     claims: {
@@ -105,7 +120,8 @@ const state = {
     ownershipHistory: {
         1: ["0x1111111111111111111111111111111111111111", "0x2222222222222222222222222222222222222222"],
         2: ["0x1111111111111111111111111111111111111111"],
-        3: ["0x1111111111111111111111111111111111111111", "0x2222222222222222222222222222222222222222", "0x3333333333333333333333333333333333333333"]
+        3: ["0x1111111111111111111111111111111111111111", "0x2222222222222222222222222222222222222222", "0x3333333333333333333333333333333333333333"],
+        4: ["0x1111111111111111111111111111111111111111"]
     }
 };
 
