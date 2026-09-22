@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BlockSure - Decentralized Electronic Warranty & Ownership System</title>
+    <title>BlockSure - Decentralized Electronic Warranty & Ownership System (Sepolia ETH)</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Ethers.js v6 -->
@@ -17,42 +17,75 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
 
-    <!-- TOP GLOBAL HEADER (CLEAN BRANDING - NO ACADEMIC TEXT) -->
+    <!-- SEPOLIA NETWORK ANNOUNCEMENT BAR -->
+    <div class="bg-gradient-to-r from-sky-950 via-slate-900 to-indigo-950 border-b border-sky-800/40 px-4 py-2 text-xs text-slate-300 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40 font-mono text-[11px] font-bold">
+                ⛓️ Sepolia Testnet (11155111)
+            </span>
+            <span class="text-slate-300">All smart contract transactions settle in <strong>Sepolia ETH</strong></span>
+        </div>
+        <div class="flex items-center gap-4 text-[11px]">
+            <a href="https://sepoliafaucet.com" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:text-sky-300 flex items-center gap-1 font-semibold underline underline-offset-2">
+                <i data-lucide="droplet" class="w-3.5 h-3.5"></i> Get Free Sepolia ETH
+            </a>
+            <span class="text-slate-600">|</span>
+            <a href="https://sepolia.etherscan.io" target="_blank" rel="noopener noreferrer" class="text-slate-400 hover:text-white flex items-center gap-1">
+                <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Sepolia Etherscan
+            </a>
+        </div>
+    </div>
+
+    <!-- TOP GLOBAL HEADER -->
     <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-3">
-                <div class="p-2.5 bg-sky-500/10 border border-sky-500/30 rounded-2xl text-sky-400">
+                <div class="p-2.5 bg-sky-500/10 border border-sky-500/30 rounded-2xl text-sky-400 shadow-lg shadow-sky-500/10">
                     <i data-lucide="shield-check" class="w-7 h-7"></i>
                 </div>
                 <div>
                     <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                        BlockSure <span class="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">Enterprise</span>
+                        BlockSure <span class="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 font-semibold">Sepolia Enterprise</span>
                     </h1>
                     <p class="text-xs text-slate-400">Decentralized Electronic Warranty & Asset Ownership Protocol</p>
                 </div>
             </div>
 
-            <!-- Header Session Status & Logout -->
-            <div id="headerUserSession" class="hidden flex items-center gap-3">
-                <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-slate-300">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span>Session: <strong id="activeUserLabel" class="text-sky-300">Manufacturer</strong></span>
-                </div>
-                <button onclick="handleLogout()" class="px-4 py-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-800/60 text-rose-300 font-semibold text-xs transition flex items-center gap-1.5">
-                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Logout
+            <!-- Wallet & Session Controls -->
+            <div class="flex items-center gap-3">
+                <!-- Connect MetaMask Button -->
+                <button id="connectMetaMaskBtn" onclick="connectSepoliaWallet()" class="px-3.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/40 text-xs font-semibold transition flex items-center gap-1.5 shadow-sm">
+                    <i data-lucide="wallet" class="w-4 h-4"></i>
+                    <span id="walletBtnText">🦊 Connect Sepolia Wallet</span>
                 </button>
+
+                <!-- Session Status & Logout (Shown after login) -->
+                <div id="headerUserSession" class="hidden flex items-center gap-3">
+                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700 text-xs text-slate-300 font-mono">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span id="activeUserLabel" class="text-sky-300 font-sans font-medium">Manufacturer</span>
+                        <span class="text-slate-500">|</span>
+                        <span id="headerSepoliaBalance" class="text-purple-300 font-semibold">0.25 Sepolia ETH</span>
+                    </div>
+                    <button onclick="handleLogout()" class="px-3.5 py-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-800/60 text-rose-300 font-semibold text-xs transition flex items-center gap-1.5">
+                        <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Logout
+                    </button>
+                </div>
             </div>
         </div>
     </header>
 
     <!-- ========================================================= -->
-    <!-- 1. LANDING PAGE & PORTAL SELECTOR (VTOP STYLE) -->
+    <!-- 1. LANDING PAGE & PORTAL SELECTOR -->
     <!-- ========================================================= -->
     <section id="portalSelectorScreen" class="flex-1 max-w-7xl mx-auto px-6 py-12 flex flex-col justify-center items-center w-full space-y-10">
         
         <div class="text-center space-y-3 max-w-2xl">
+            <span class="px-3 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30 text-xs font-semibold">
+                Ethereum Sepolia Testnet Protocol
+            </span>
             <h2 class="text-3xl font-extrabold text-white tracking-tight">Enterprise Portal Access</h2>
-            <p class="text-sm text-slate-400">Select your authorized organization role below to authenticate and access your management dashboard.</p>
+            <p class="text-sm text-slate-400">Select your authorized role to authenticate and interact with on-chain electronic warranty contracts on Sepolia.</p>
         </div>
 
         <!-- 4 Role Cards Grid -->
@@ -65,7 +98,7 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-white text-lg">Manufacturer</h3>
-                    <p class="text-xs text-slate-400 mt-1">Product Minting & Batch Merkle Root Management</p>
+                    <p class="text-xs text-slate-400 mt-1">Mint Product NFTs & publish Merkle Tree Batch Roots on Sepolia</p>
                 </div>
                 <button class="w-full bg-sky-600/20 hover:bg-sky-600 text-sky-300 hover:text-white font-semibold py-2.5 rounded-xl text-xs border border-sky-500/30 transition">
                     Manufacturer Login &rarr;
@@ -79,7 +112,7 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-white text-lg">Service Center</h3>
-                    <p class="text-xs text-slate-400 mt-1">Maintenance Logs & Claim Resolution Portal</p>
+                    <p class="text-xs text-slate-400 mt-1">Log Repairs & settle service fees in Sepolia ETH</p>
                 </div>
                 <button class="w-full bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white font-semibold py-2.5 rounded-xl text-xs border border-amber-500/30 transition">
                     Service Login &rarr;
@@ -93,7 +126,7 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-white text-lg">Customer / Owner</h3>
-                    <p class="text-xs text-slate-400 mt-1">Warranty Coverage & Second-Hand Transfers</p>
+                    <p class="text-xs text-slate-400 mt-1">Activate Coverage, file claims with Sepolia ETH escrow deposit</p>
                 </div>
                 <button class="w-full bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white font-semibold py-2.5 rounded-xl text-xs border border-emerald-500/30 transition">
                     Customer Login &rarr;
@@ -107,7 +140,7 @@
                 </div>
                 <div>
                     <h3 class="font-bold text-white text-lg">Public Inspector</h3>
-                    <p class="text-xs text-slate-400 mt-1">Non-SHA256 Hash Verification & QR Lookup</p>
+                    <p class="text-xs text-slate-400 mt-1">Verify Keccak-Polynomial hashes & view Sepolia Etherscan logs</p>
                 </div>
                 <button class="w-full bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white font-semibold py-2.5 rounded-xl text-xs border border-purple-500/30 transition">
                     Inspector Access &rarr;
@@ -118,7 +151,7 @@
     </section>
 
     <!-- ========================================================= -->
-    <!-- 2. LOGIN FORM MODAL (AUTHENTICATION REQUIRED) -->
+    <!-- 2. LOGIN FORM MODAL -->
     <!-- ========================================================= -->
     <div id="loginModal" class="hidden fixed inset-0 z-50 auth-overlay flex items-center justify-center p-4">
         <div class="glass-panel p-8 max-w-md w-full space-y-6 relative border-sky-500/30 shadow-2xl">
@@ -126,7 +159,7 @@
             
             <div class="space-y-1 text-center">
                 <h3 id="loginModalTitle" class="text-xl font-bold text-white">Portal Authentication</h3>
-                <p class="text-xs text-slate-400">Enter your credentials below to access the secure dashboard.</p>
+                <p class="text-xs text-slate-400">Authenticate to broadcast transactions to the Sepolia blockchain.</p>
             </div>
 
             <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
@@ -142,7 +175,6 @@
                         class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-sky-500">
                 </div>
 
-                <!-- Credential Hints -->
                 <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
                     <p class="font-semibold text-slate-300">System Demo Credentials:</p>
                     <p id="credHint1">• <strong>Manufacturer:</strong> User: <code class="text-sky-300">mfr</code> | Pass: <code class="text-sky-300">MFR-SEC-2026-KEY</code></p>
@@ -158,18 +190,25 @@
     </div>
 
     <!-- ========================================================= -->
-    <!-- 3. MAIN APPLICATION DASHBOARD (LOCKED UNTIL AUTHENTICATED) -->
+    <!-- 3. MAIN APPLICATION DASHBOARD -->
     <!-- ========================================================= -->
     <div id="mainDashboard" class="hidden flex-1 flex flex-col">
         <main class="max-w-7xl mx-auto px-6 py-8 flex-1 w-full flex flex-col gap-8">
 
-            <!-- NOTIFICATION TOAST BAR -->
-            <div id="toast" class="hidden p-4 rounded-2xl border text-sm flex items-center justify-between transition-all">
+            <!-- NOTIFICATION TOAST BAR WITH ETHERSCAN TX LINK -->
+            <div id="toast" class="hidden p-4 rounded-2xl border text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all">
                 <div class="flex items-center gap-2.5">
-                    <i id="toastIcon" data-lucide="info" class="w-5 h-5"></i>
-                    <span id="toastMsg">Notification message</span>
+                    <i id="toastIcon" data-lucide="info" class="w-5 h-5 shrink-0"></i>
+                    <div>
+                        <span id="toastMsg" class="font-medium">Notification message</span>
+                        <div id="toastTxLinkContainer" class="hidden text-xs mt-0.5">
+                            <a id="toastTxLink" href="#" target="_blank" rel="noopener noreferrer" class="text-sky-300 underline flex items-center gap-1 font-mono">
+                                View transaction on Sepolia Etherscan &rarr;
+                            </a>
+                        </div>
+                    </div>
                 </div>
-                <button onclick="hideToast()" class="text-slate-400 hover:text-white">&times;</button>
+                <button onclick="hideToast()" class="text-slate-400 hover:text-white shrink-0">&times;</button>
             </div>
 
             <!-- MANUFACTURER PORTAL TAB -->
@@ -179,14 +218,17 @@
                         <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
                             <i data-lucide="factory" class="text-sky-400 w-6 h-6"></i> Manufacturer Control Center
                         </h2>
-                        <p class="text-xs text-slate-400 mt-1">Mint NFT Digital Warranties, publish Merkle Tree Batch Roots, and manage Service Center approvals.</p>
+                        <p class="text-xs text-slate-400 mt-1">Mint NFT Digital Warranties, publish Merkle Tree Batch Roots, and manage Service Center approvals on Sepolia.</p>
                     </div>
-                    <span class="text-xs px-3 py-1.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/30 font-medium">
-                        Authorized Manufacturer Session
-                    </span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30 font-medium">
+                            Network: Sepolia ETH (11155111)
+                        </span>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Product Registration Form -->
                     <div class="glass-panel p-6 space-y-5 border-sky-500/20">
                         <h3 class="font-bold text-white text-base flex items-center gap-2">
                             <i data-lucide="plus-circle" class="text-sky-400 w-5 h-5"></i> Register & Mint Product NFT
@@ -195,7 +237,7 @@
                             <div>
                                 <label class="text-xs text-slate-400 block mb-1.5">Serial Number (Unique)</label>
                                 <input type="text" id="mfrSerial" placeholder="e.g. SN-APPLE-2026-X99" required
-                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
+                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500 font-mono">
                             </div>
                             <div>
                                 <label class="text-xs text-slate-400 block mb-1.5">Model Name</label>
@@ -213,41 +255,45 @@
                                     class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
                             </div>
 
-                            <div class="bg-sky-950/40 border border-sky-800/40 p-3.5 rounded-xl text-xs space-y-1.5">
-                                <div class="text-sky-300 font-semibold flex items-center gap-1.5">
-                                    <i data-lucide="cpu" class="w-4 h-4"></i> Keccak-256 + Polynomial Checksum
+                            <div class="bg-purple-950/40 border border-purple-800/40 p-3.5 rounded-xl text-xs space-y-1.5">
+                                <div class="text-purple-300 font-semibold flex items-center justify-between">
+                                    <span class="flex items-center gap-1.5">
+                                        <i data-lucide="cpu" class="w-4 h-4"></i> Sepolia Smart Contract Mint
+                                    </span>
+                                    <span class="text-[11px] font-mono font-bold text-purple-200">0.002 Sepolia ETH</span>
                                 </div>
-                                <p class="text-slate-400 text-[11px]">Generates an EVM-verifiable non-SHA256 fingerprint hash on-chain.</p>
+                                <p class="text-slate-400 text-[11px]">Computes on-chain Keccak-256 + 31-bit polynomial fingerprint on Ethereum Sepolia.</p>
                             </div>
 
                             <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-semibold py-3 rounded-xl text-sm transition shadow-lg shadow-sky-600/20 flex items-center justify-center gap-2">
-                                <i data-lucide="sparkles" class="w-4 h-4"></i> Mint Digital Warranty NFT
+                                <i data-lucide="sparkles" class="w-4 h-4"></i> Mint with Sepolia ETH
                             </button>
                         </form>
                     </div>
 
+                    <!-- Merkle Batch Publisher & Catalog -->
                     <div class="lg:col-span-2 space-y-8">
                         <div class="glass-panel p-6 space-y-4">
                             <div class="flex justify-between items-center">
                                 <h3 class="font-bold text-white text-base flex items-center gap-2">
                                     <i data-lucide="git-fork" class="text-emerald-400 w-5 h-5"></i> Merkle Tree Batch Root Publisher
                                 </h3>
-                                <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                                    Cryptographic Batch Proof
+                                <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
+                                    Gas: ~0.001 Sepolia ETH
                                 </span>
                             </div>
                             <form onsubmit="handlePublishMerkleRoot(event)" class="flex flex-col sm:flex-row gap-3">
                                 <input type="text" id="merkleRootInput" placeholder="Enter Merkle Tree Root Hash (0x...)" required
-                                    class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500">
+                                    class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 font-mono">
                                 <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition flex items-center justify-center gap-2">
-                                    <i data-lucide="upload-cloud" class="w-4 h-4"></i> Commit Root
+                                    <i data-lucide="upload-cloud" class="w-4 h-4"></i> Commit to Sepolia
                                 </button>
                             </form>
                         </div>
 
                         <div class="glass-panel p-6 space-y-4">
                             <div class="flex justify-between items-center">
-                                <h3 class="font-bold text-white text-base">Registered Product Inventory</h3>
+                                <h3 class="font-bold text-white text-base">Registered Product Inventory (Sepolia On-Chain)</h3>
                                 <span id="mfrProductCount" class="text-xs text-slate-400">Total: 0</span>
                             </div>
                             <div id="mfrProductsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -265,50 +311,65 @@
                         <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
                             <i data-lucide="user-check" class="text-sky-400 w-6 h-6"></i> Customer Warranty Dashboard
                         </h2>
-                        <p class="text-xs text-slate-400 mt-1">Activate warranty coverage, file repair claims, and transfer second-hand ownership.</p>
+                        <p class="text-xs text-slate-400 mt-1">Activate warranty coverage, file repair claims with Sepolia ETH escrow deposit, and transfer NFT ownership.</p>
+                    </div>
+                    <div class="text-xs text-purple-300 font-mono bg-purple-950/40 border border-purple-800/40 px-3 py-1.5 rounded-xl">
+                        Gas Currency: Sepolia ETH
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Activate Warranty Card -->
                     <div class="glass-panel p-6 space-y-4">
-                        <h3 class="font-bold text-white text-sm flex items-center gap-2">
-                            <i data-lucide="zap" class="text-amber-400 w-4 h-4"></i> Activate Warranty Coverage
-                        </h3>
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                                <i data-lucide="zap" class="text-amber-400 w-4 h-4"></i> Activate Warranty
+                            </h3>
+                            <span class="text-[10px] text-amber-300 font-mono">0.001 Sepolia ETH</span>
+                        </div>
                         <form onsubmit="handleActivateWarranty(event)" class="space-y-3">
                             <input type="text" id="custActivateProdId" placeholder="Product ID or Serial Number" required
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 font-mono">
                             <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-2.5 rounded-xl text-sm transition">
-                                Activate Coverage
+                                Activate on Sepolia
                             </button>
                         </form>
                     </div>
 
+                    <!-- File Claim with Refundable Deposit -->
                     <div class="glass-panel p-6 space-y-4">
-                        <h3 class="font-bold text-white text-sm flex items-center gap-2">
-                            <i data-lucide="alert-circle" class="text-rose-400 w-4 h-4"></i> File Repair Claim Ticket
-                        </h3>
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                                <i data-lucide="alert-circle" class="text-rose-400 w-4 h-4"></i> File Repair Claim Ticket
+                            </h3>
+                            <span class="text-[10px] text-rose-300 font-mono">0.005 Sepolia ETH Escrow</span>
+                        </div>
                         <form onsubmit="handleFileClaim(event)" class="space-y-3">
                             <input type="number" id="claimProdId" placeholder="Product ID" required
                                 class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500">
                             <input type="text" id="claimIssue" placeholder="Issue Description" required
                                 class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500">
                             <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-xl text-sm transition">
-                                Submit Claim Ticket
+                                Lock Deposit & Submit Claim
                             </button>
                         </form>
                     </div>
 
+                    <!-- Transfer Second-Hand NFT -->
                     <div class="glass-panel p-6 space-y-4">
-                        <h3 class="font-bold text-white text-sm flex items-center gap-2">
-                            <i data-lucide="arrow-right-left" class="text-purple-400 w-4 h-4"></i> Transfer Second-Hand NFT
-                        </h3>
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                                <i data-lucide="arrow-right-left" class="text-purple-400 w-4 h-4"></i> Transfer Second-Hand NFT
+                            </h3>
+                            <span class="text-[10px] text-purple-300 font-mono">Gas: Sepolia ETH</span>
+                        </div>
                         <form onsubmit="handleTransferOwnership(event)" class="space-y-3">
                             <input type="number" id="transferProdId" placeholder="Product ID" required
                                 class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
                             <input type="text" id="transferNewOwnerAddr" placeholder="Buyer Wallet Address (0x...)" required
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500 font-mono">
                             <button type="submit" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2.5 rounded-xl text-sm transition">
-                                Transfer Ownership
+                                Transfer On-Chain
                             </button>
                         </form>
                     </div>
@@ -316,7 +377,7 @@
 
                 <div class="glass-panel p-6 space-y-4">
                     <div class="flex justify-between items-center">
-                        <h3 class="font-bold text-white text-base">My Digital Warranty Assets</h3>
+                        <h3 class="font-bold text-white text-base">My Digital Warranty Assets (Sepolia Network)</h3>
                         <span id="custWarrantyCount" class="text-xs text-slate-400">Total: 0</span>
                     </div>
                     <div id="custWarrantiesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -332,10 +393,10 @@
                         <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
                             <i data-lucide="wrench" class="text-amber-400 w-6 h-6"></i> Authorized Service Center Portal
                         </h2>
-                        <p class="text-xs text-slate-400 mt-1">Log maintenance, resolve open repair claim tickets, and complete service jobs on-chain.</p>
+                        <p class="text-xs text-slate-400 mt-1">Log maintenance records, bill services in Sepolia ETH, and release customer escrow deposits.</p>
                     </div>
                     <span class="text-xs px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-medium">
-                        Authorized Service Center Session
+                        Service Center Billing: Sepolia ETH
                     </span>
                 </div>
 
@@ -361,19 +422,22 @@
                                     class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
                             </div>
                             <div>
-                                <label class="text-xs text-slate-400 block mb-1">Service Cost (ETH)</label>
-                                <input type="text" id="scCost" placeholder="0.03" required
-                                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500">
+                                <label class="text-xs text-slate-400 block mb-1">Service Cost (Sepolia ETH)</label>
+                                <div class="relative">
+                                    <input type="text" id="scCost" placeholder="0.03" required
+                                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 font-mono">
+                                    <span class="absolute right-4 top-2.5 text-xs text-slate-400 font-mono">Sepolia ETH</span>
+                                </div>
                             </div>
 
                             <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold py-3 rounded-xl text-sm transition flex items-center justify-center gap-2">
-                                <i data-lucide="save" class="w-4 h-4"></i> Record Repair On-Chain
+                                <i data-lucide="save" class="w-4 h-4"></i> Record on Sepolia Ledger
                             </button>
                         </form>
                     </div>
 
                     <div class="lg:col-span-2 glass-panel p-6 space-y-4">
-                        <h3 class="font-bold text-white text-base">On-Chain Maintenance & Claim History</h3>
+                        <h3 class="font-bold text-white text-base">On-Chain Maintenance & Claim History (Sepolia ETH)</h3>
                         <div id="scRepairRecordsList" class="space-y-4">
                             <!-- Dynamic Cards -->
                         </div>
@@ -386,10 +450,13 @@
                 <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 border-b border-slate-800 pb-4">
                     <div>
                         <h2 class="text-xl font-bold text-white flex items-center gap-2.5">
-                            <i data-lucide="qr-code" class="text-emerald-400 w-6 h-6"></i> Public Authenticity & Fraud Inspector
+                            <i data-lucide="qr-code" class="text-emerald-400 w-6 h-6"></i> Public Authenticity & Sepolia Explorer
                         </h2>
-                        <p class="text-xs text-slate-400 mt-1">Verify non-SHA256 fingerprint hashes, inspect Merkle batch roots, and generate printable digital warranty certificates.</p>
+                        <p class="text-xs text-slate-400 mt-1">Verify non-SHA256 fingerprint hashes, inspect Merkle batch roots, and view transactions on Sepolia Etherscan.</p>
                     </div>
+                    <a id="sepoliaExplorerLink" href="https://sepolia.etherscan.io" target="_blank" rel="noopener noreferrer" class="text-xs px-3 py-1.5 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 font-medium flex items-center gap-1.5 transition">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Open Sepolia Etherscan
+                    </a>
                 </div>
 
                 <div class="glass-panel p-5">
@@ -397,10 +464,10 @@
                         <div class="relative flex-1">
                             <i data-lucide="search" class="w-5 h-5 absolute left-4 top-3.5 text-slate-400"></i>
                             <input type="text" id="verifierQuery" placeholder="Enter Product ID or Serial Number (e.g. 1 or SN-APPLE-2026-X99)" required
-                                class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-sky-500">
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:outline-none focus:border-sky-500 font-mono">
                         </div>
                         <button type="submit" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold px-8 py-3 rounded-xl text-sm transition flex items-center justify-center gap-2">
-                            <i data-lucide="shield-check" class="w-4 h-4"></i> Inspect Product
+                            <i data-lucide="shield-check" class="w-4 h-4"></i> Inspect on Sepolia
                         </button>
                     </form>
                 </div>
@@ -432,20 +499,23 @@
 
                     <div class="lg:col-span-2 space-y-6">
                         <div class="glass-panel p-6 space-y-3">
-                            <h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-2">
-                                <i data-lucide="fingerprint" class="w-4 h-4"></i> Non-SHA256 Cryptographic Fingerprint (Keccak-Polynomial)
-                            </h4>
+                            <div class="flex justify-between items-center">
+                                <h4 class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-2">
+                                    <i data-lucide="fingerprint" class="w-4 h-4"></i> Non-SHA256 Fingerprint (Keccak-Polynomial)
+                                </h4>
+                                <span class="text-[10px] px-2 py-0.5 rounded bg-sky-950 text-sky-300 font-mono">Sepolia EVM Verified</span>
+                            </div>
                             <div id="vCustomHash" class="hash-code-box">
                                 0x0000000000000000000000000000000000000000000000000000000000000000
                             </div>
                             <p class="text-[11px] text-slate-400">
-                                ✓ Verified on Ethereum Virtual Machine. Any alteration to product specifications invalidates this fingerprint.
+                                ✓ Cryptographically validated on Ethereum Sepolia. Any modification to serial, model, or manufacturer invalidates this state.
                             </p>
                         </div>
 
                         <div class="glass-panel p-6 space-y-4">
                             <h4 class="font-bold text-white text-base flex items-center gap-2">
-                                <i data-lucide="history" class="text-sky-400 w-5 h-5"></i> Immutable Product Lifecycle History
+                                <i data-lucide="history" class="text-sky-400 w-5 h-5"></i> Immutable Sepolia Lifecycle History
                             </h4>
                             <div id="vTimeline" class="space-y-4">
                                 <!-- Dynamic Timeline Items -->
@@ -466,7 +536,7 @@
             <div class="border-b border-slate-800 pb-4 text-center space-y-1">
                 <span class="text-xs text-sky-400 uppercase tracking-widest font-bold">Official Digital Proof of Warranty</span>
                 <h2 id="certModelTitle" class="text-2xl font-extrabold text-white">MacBook Pro 16 M3 Max</h2>
-                <p id="certBrand" class="text-xs text-slate-400">Apple Inc. | Blockchain Warranted Item</p>
+                <p id="certBrand" class="text-xs text-slate-400">Apple Inc. | Ethereum Sepolia Warranted NFT</p>
             </div>
 
             <div class="grid grid-cols-2 gap-4 text-xs bg-slate-950 p-4 rounded-xl border border-slate-800">
@@ -483,8 +553,8 @@
                     <strong id="certStatus" class="text-emerald-400">Active Coverage</strong>
                 </div>
                 <div>
-                    <span class="text-slate-400 block">Authenticity Index:</span>
-                    <strong class="text-emerald-400">100% Genuine (EVM Verified)</strong>
+                    <span class="text-slate-400 block">Settlement Layer:</span>
+                    <strong class="text-purple-300">Ethereum Sepolia Testnet</strong>
                 </div>
             </div>
 
@@ -495,7 +565,7 @@
 
             <div class="flex justify-between items-center pt-2">
                 <div class="text-[10px] text-slate-500">
-                    Verified on Ethereum Virtual Machine Architecture
+                    Settled on Ethereum Sepolia Testnet (Chain ID 11155111)
                 </div>
                 <button onclick="window.print()" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold px-6 py-2 rounded-xl text-xs transition">
                     Print / Save as PDF
