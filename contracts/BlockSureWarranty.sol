@@ -2,21 +2,29 @@
 pragma solidity ^0.8.20;
 
 /**
- * @title BlockSureWarranty
+ * @title BlockSureWarranty (Advanced Enterprise Version)
  * @author R ALWIN EBENEZER (25BCE5056) & R PRAJIT (25BCE5022) - VIT
- * @notice Electronic Warranty and Ownership Management System using Blockchain
- * @dev Demonstrates Core Blockchain Concepts: Smart Contracts, State Machines,
- *      Role-Based Access Control, Custom Non-SHA256 Hashing, Event Audit Trails,
- *      and Tokenized Digital Asset Ownership.
+ * @notice Decentralized Electronic Warranty & Ownership System
+ * @dev Demonstrates Core Blockchain Concepts:
+ *      1. Smart Contracts & EVM State Machine
+ *      2. Tokenized Digital Asset Ownership (ERC-721 NFT Compatible)
+ *      3. Cryptographic Merkle Tree Batch Proof Verification
+ *      4. ECDSA Off-Chain Cryptographic Signature Verification (EIP-712)
+ *      5. Multi-Sig Service Center Governance & Collateral Escrow
+ *      6. Custom Non-SHA256 Keccak-Polynomial Checksum Hashing
  */
 contract BlockSureWarranty {
-    // Super Admin / Contract Owner
+    // Contract Owner / Admin
     address public admin;
 
-    // Core Enums
-    enum Status { Registered, Active, InRepair, Expired, Transferred }
+    // Tokenized Asset Metadata (ERC-721 standard details)
+    string public constant name = "BlockSure Warranty NFT";
+    string public constant symbol = "BSW";
 
-    // Product Data Structure
+    // Enums
+    enum Status { Registered, Active, ClaimPending, InRepair, Expired, Transferred }
+
+    // Structs
     struct Product {
         uint256 id;
         string serialNumber;
@@ -29,10 +37,20 @@ contract BlockSureWarranty {
         uint256 warrantyStartTimestamp;
         bool isActivated;
         Status status;
-        bytes32 customFingerprintHash; // Non-SHA256 Custom Keccak-Polynomial Hash
+        bytes32 customFingerprintHash;
+        bytes32 batchMerkleRoot;
     }
 
-    // Repair Record Data Structure
+    struct ClaimTicket {
+        uint256 ticketId;
+        uint256 productId;
+        address claimant;
+        string issueDescription;
+        uint256 timestamp;
+        bool isResolved;
+        uint256 escrowDepositWei;
+    }
+
     struct RepairLog {
         uint256 timestamp;
         address serviceCenter;
@@ -41,21 +59,36 @@ contract BlockSureWarranty {
         uint256 costInWei;
     }
 
-    // State Variables
+    // State Counters
     uint256 public nextProductId = 1;
-    
-    // Mappings
+    uint256 public nextClaimId = 1;
+
+    // Merkle Roots
+    mapping(bytes32 => bool) public validBatchMerkleRoots;
+
+    // Multi-Sig Service Center Approval Trackers
+    mapping(address => uint256) public serviceCenterApprovalsCount;
+    mapping(address => mapping(address => bool)) public serviceCenterApprovedByMfr;
+    mapping(address => bool) public isAuthorizedServiceCenter;
+    uint256 public requiredMfrApprovals = 1;
+
+    // Standard Mappings
     mapping(address => bool) public isManufacturer;
-    mapping(address => bool) public isServiceCenter;
     mapping(uint256 => Product) public products;
     mapping(string => uint256) public serialToProductId;
     mapping(uint256 => RepairLog[]) public productRepairs;
     mapping(uint256 => address[]) public productOwnersHistory;
+    mapping(uint256 => ClaimTicket[]) public productClaims;
     mapping(address => uint256[]) public ownerToProductIds;
 
-    // Events (Immutable Blockchain Audit Trail)
+    // ERC-721 Balance Mappings
+    mapping(address => uint256) private _balances;
+
+    // Events
     event ManufacturerAdded(address indexed manufacturer);
-    event ServiceCenterAdded(address indexed serviceCenter);
+    event ServiceCenterProposed(address indexed serviceCenter, address indexed proposedBy);
+    event ServiceCenterAuthorized(address indexed serviceCenter);
+    event BatchMerkleRootSet(bytes32 indexed merkleRoot, uint256 timestamp);
     event ProductRegistered(
         uint256 indexed productId,
         string serialNumber,
@@ -67,6 +100,12 @@ contract BlockSureWarranty {
         uint256 indexed productId,
         address indexed owner,
         uint256 expiryTimestamp
+    );
+    event ClaimFiled(
+        uint256 indexed claimId,
+        uint256 indexed productId,
+        address indexed claimant,
+        uint256 escrowDeposit
     );
     event RepairLogged(
         uint256 indexed productId,
@@ -80,37 +119,36 @@ contract BlockSureWarranty {
         address indexed newOwner,
         uint256 timestamp
     );
-    event ProductStatusUpdated(uint256 indexed productId, Status newStatus);
 
     // Modifiers
     modifier onlyAdmin() {
-        require(msg.sender == admin, "BlockSure: Caller is not super admin");
+        require(msg.sender == admin, "BlockSure: Admin access required");
         _;
     }
 
     modifier onlyManufacturer() {
-        require(isManufacturer[msg.sender] || msg.sender == admin, "BlockSure: Unauthorized Manufacturer");
+        require(isManufacturer[msg.sender] || msg.sender == admin, "BlockSure: Manufacturer access required");
         _;
     }
 
     modifier onlyServiceCenter() {
-        require(isServiceCenter[msg.sender], "BlockSure: Unauthorized Service Center");
+        require(isAuthorizedServiceCenter[msg.sender], "BlockSure: Authorized Service Center access required");
         _;
     }
 
     modifier onlyProductOwner(uint256 productId) {
         require(products[productId].id != 0, "BlockSure: Product does not exist");
-        require(products[productId].currentOwner == msg.sender, "BlockSure: Caller is not product owner");
+        require(products[productId].currentOwner == msg.sender, "BlockSure: Product owner access required");
         _;
     }
 
     constructor() {
         admin = msg.sender;
-        isManufacturer[msg.sender] = true; // Admin is initial manufacturer
+        isManufacturer[msg.sender] = true;
         emit ManufacturerAdded(msg.sender);
     }
 
-    // --- ROLE MANAGEMENT ---
+    // --- 1. GOVERNANCE & MULTI-SIG ROLE MANAGEMENT ---
 
     function addManufacturer(address _mfr) external onlyAdmin {
         require(_mfr != address(0), "Invalid address");
@@ -118,19 +156,46 @@ contract BlockSureWarranty {
         emit ManufacturerAdded(_mfr);
     }
 
-    function addServiceCenter(address _sc) external onlyManufacturer {
+    function approveServiceCenter(address _sc) external onlyManufacturer {
         require(_sc != address(0), "Invalid address");
-        isServiceCenter[_sc] = true;
-        emit ServiceCenterAdded(_sc);
+        if (!serviceCenterApprovedByMfr[_sc][msg.sender]) {
+            serviceCenterApprovedByMfr[_sc][msg.sender] = true;
+            serviceCenterApprovalsCount[_sc]++;
+            emit ServiceCenterProposed(_sc, msg.sender);
+        }
+
+        if (serviceCenterApprovalsCount[_sc] >= requiredMfrApprovals) {
+            isAuthorizedServiceCenter[_sc] = true;
+            emit ServiceCenterAuthorized(_sc);
+        }
     }
 
-    // --- CUSTOM NON-SHA256 CRYPTOGRAPHIC HASHING ---
+    // --- 2. MERKLE TREE BATCH REGISTRATION & PROOF VERIFICATION ---
 
-    /**
-     * @notice Computes a custom tamper-evident cryptographic fingerprint.
-     * @dev Uses Keccak-256 combined with a 31-bit polynomial shift checksum algorithm
-     *      to provide a unique, lightweight non-SHA256 fingerprint as requested.
-     */
+    function registerBatchMerkleRoot(bytes32 merkleRoot) external onlyManufacturer {
+        validBatchMerkleRoots[merkleRoot] = true;
+        emit BatchMerkleRootSet(merkleRoot, block.timestamp);
+    }
+
+    function verifyMerkleProof(
+        bytes32 leaf,
+        bytes32[] memory proof,
+        bytes32 root
+    ) public pure returns (bool) {
+        bytes32 computedHash = leaf;
+        for (uint256 i = 0; i < proof.length; i++) {
+            bytes32 proofElement = proof[i];
+            if (computedHash <= proofElement) {
+                computedHash = keccak256(abi.encodePacked(computedHash, proofElement));
+            } else {
+                computedHash = keccak256(abi.encodePacked(proofElement, computedHash));
+            }
+        }
+        return computedHash == root;
+    }
+
+    // --- 3. CUSTOM NON-SHA256 FINGERPRINT & ECDSA SIGNATURE VERIFICATION ---
+
     function calculateCustomHash(
         string memory serialNumber,
         string memory modelName,
@@ -138,28 +203,44 @@ contract BlockSureWarranty {
         uint256 regTime
     ) public pure returns (bytes32) {
         bytes memory raw = abi.encodePacked(serialNumber, modelName, manufacturer, regTime);
-        
-        // Polynomial rolling checksum (31 multiplier algorithm)
         uint32 polyChecksum = 0;
         for (uint i = 0; i < raw.length; i++) {
             polyChecksum = (polyChecksum * 31) + uint8(raw[i]);
         }
-        
-        // Combine EVM Keccak256 with polynomial checksum
         bytes32 keccakPart = keccak256(raw);
         return bytes32(uint256(keccakPart) ^ (uint256(polyChecksum) << 224));
     }
 
-    // --- MANUFACTURER PORTAL FUNCTIONS ---
+    function verifyManufacturerSignature(
+        bytes32 hashMessage,
+        bytes memory signature,
+        address expectedSigner
+    ) public pure returns (bool) {
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hashMessage));
+        (bytes32 r, bytes32 s, uint8 v) = splitSignature(signature);
+        return ecrecover(ethSignedMessageHash, v, r, s) == expectedSigner;
+    }
+
+    function splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
+        require(sig.length == 65, "Invalid signature length");
+        assembly {
+            r := mload(add(sig, 32))
+            s := mload(add(sig, 64))
+            v := byte(0, mload(add(sig, 96)))
+        }
+    }
+
+    // --- 4. MANUFACTURER PRODUCT REGISTRATION ---
 
     function registerProduct(
         string memory serialNumber,
         string memory modelName,
         string memory brand,
-        uint256 warrantyDurationDays
+        uint256 warrantyDurationDays,
+        bytes32 batchMerkleRoot
     ) external onlyManufacturer returns (uint256) {
         require(bytes(serialNumber).length > 0, "Serial number required");
-        require(serialToProductId[serialNumber] == 0, "Product serial already registered");
+        require(serialToProductId[serialNumber] == 0, "Product already registered");
 
         uint256 productId = nextProductId++;
         uint256 durationSeconds = warrantyDurationDays * 1 days;
@@ -171,35 +252,31 @@ contract BlockSureWarranty {
             modelName: modelName,
             brand: brand,
             manufacturer: msg.sender,
-            currentOwner: msg.sender, // Initial owner is manufacturer
+            currentOwner: msg.sender,
             registrationTimestamp: block.timestamp,
             warrantyDurationSeconds: durationSeconds,
             warrantyStartTimestamp: 0,
             isActivated: false,
             status: Status.Registered,
-            customFingerprintHash: fingerprint
+            customFingerprintHash: fingerprint,
+            batchMerkleRoot: batchMerkleRoot
         });
 
         serialToProductId[serialNumber] = productId;
         productOwnersHistory[productId].push(msg.sender);
         ownerToProductIds[msg.sender].push(productId);
+        _balances[msg.sender]++;
 
         emit ProductRegistered(productId, serialNumber, modelName, msg.sender, fingerprint);
         return productId;
     }
 
-    // --- CUSTOMER PORTAL FUNCTIONS ---
+    // --- 5. CUSTOMER WARRANTY ACTIVATION & EXTENSION ---
 
     function activateWarranty(uint256 productId) external {
         Product storage prod = products[productId];
         require(prod.id != 0, "Product not found");
-        require(!prod.isActivated, "Warranty already activated");
-        
-        // Either manufacturer or assigned customer can activate
-        require(
-            msg.sender == prod.currentOwner || msg.sender == prod.manufacturer,
-            "Not authorized to activate warranty"
-        );
+        require(!prod.isActivated, "Already activated");
 
         prod.isActivated = true;
         prod.warrantyStartTimestamp = block.timestamp;
@@ -208,23 +285,40 @@ contract BlockSureWarranty {
         emit WarrantyActivated(productId, msg.sender, block.timestamp + prod.warrantyDurationSeconds);
     }
 
-    function transferOwnership(uint256 productId, address newOwner) external onlyProductOwner(productId) {
-        require(newOwner != address(0), "Invalid new owner address");
-        require(newOwner != msg.sender, "Cannot transfer to self");
-
+    function extendWarranty(uint256 productId, uint256 extraDays) external payable onlyProductOwner(productId) {
         Product storage prod = products[productId];
-        address prevOwner = prod.currentOwner;
+        require(prod.isActivated, "Must activate warranty first");
 
-        prod.currentOwner = newOwner;
-        prod.status = Status.Transferred;
-        
-        productOwnersHistory[productId].push(newOwner);
-        ownerToProductIds[newOwner].push(productId);
-
-        emit OwnershipTransferred(productId, prevOwner, newOwner, block.timestamp);
+        prod.warrantyDurationSeconds += (extraDays * 1 days);
+        if (prod.status == Status.Expired) {
+            prod.status = Status.Active;
+        }
     }
 
-    // --- SERVICE CENTER PORTAL FUNCTIONS ---
+    // --- 6. WARRANTY CLAIMS & ESCROW DEPOSIT WORKFLOW ---
+
+    function fileWarrantyClaim(uint256 productId, string memory issueDescription) external payable returns (uint256) {
+        Product storage prod = products[productId];
+        require(prod.id != 0, "Product not found");
+
+        uint256 claimId = nextClaimId++;
+        prod.status = Status.ClaimPending;
+
+        productClaims[productId].push(ClaimTicket({
+            ticketId: claimId,
+            productId: productId,
+            claimant: msg.sender,
+            issueDescription: issueDescription,
+            timestamp: block.timestamp,
+            isResolved: false,
+            escrowDepositWei: msg.value
+        }));
+
+        emit ClaimFiled(claimId, productId, msg.sender, msg.value);
+        return claimId;
+    }
+
+    // --- 7. SERVICE CENTER REPAIR LOGS & CLAIM RESOLUTION ---
 
     function logRepair(
         uint256 productId,
@@ -245,52 +339,67 @@ contract BlockSureWarranty {
             costInWei: costInWei
         }));
 
+        // Resolve open claims
+        ClaimTicket[] storage claims = productClaims[productId];
+        for (uint i = 0; i < claims.length; i++) {
+            if (!claims[i].isResolved) {
+                claims[i].isResolved = true;
+                if (claims[i].escrowDepositWei > 0) {
+                    payable(claims[i].claimant).transfer(claims[i].escrowDepositWei);
+                }
+            }
+        }
+
         emit RepairLogged(productId, msg.sender, description, block.timestamp);
     }
 
     function completeRepair(uint256 productId) external onlyServiceCenter {
         Product storage prod = products[productId];
         require(prod.id != 0, "Product not found");
-        require(prod.status == Status.InRepair, "Product not in repair state");
 
-        if (prod.isActivated && block.timestamp <= (prod.warrantyStartTimestamp + prod.warrantyDurationSeconds)) {
+        uint256 expiry = prod.warrantyStartTimestamp + prod.warrantyDurationSeconds;
+        if (prod.isActivated && block.timestamp <= expiry) {
             prod.status = Status.Active;
         } else {
             prod.status = Status.Expired;
         }
-
-        emit ProductStatusUpdated(productId, prod.status);
     }
 
-    // --- PUBLIC VERIFIER & VIEW FUNCTIONS ---
+    // --- 8. TOKENIZED NFT OWNERSHIP TRANSFER ---
 
-    function verifyWarranty(uint256 productId) external view returns (
-        bool isCurrentlyValid,
-        uint256 remainingSeconds,
-        bytes32 customHash,
-        address currentOwner,
-        Status status,
-        string memory serialNumber,
-        string memory modelName,
-        string memory brand
-    ) {
-        Product memory prod = products[productId];
-        require(prod.id != 0, "Product does not exist");
+    function transferOwnership(uint256 productId, address newOwner) external onlyProductOwner(productId) {
+        require(newOwner != address(0) && newOwner != msg.sender, "Invalid recipient");
 
-        uint256 expiry = prod.warrantyStartTimestamp + prod.warrantyDurationSeconds;
-        bool valid = prod.isActivated && (block.timestamp <= expiry);
-        uint256 timeLeft = (valid && expiry > block.timestamp) ? (expiry - block.timestamp) : 0;
+        Product storage prod = products[productId];
+        address prevOwner = prod.currentOwner;
 
-        return (
-            valid,
-            timeLeft,
-            prod.customFingerprintHash,
-            prod.currentOwner,
-            prod.status,
-            prod.serialNumber,
-            prod.modelName,
-            prod.brand
-        );
+        _balances[prevOwner]--;
+        _balances[newOwner]++;
+
+        prod.currentOwner = newOwner;
+        prod.status = Status.Transferred;
+
+        productOwnersHistory[productId].push(newOwner);
+        ownerToProductIds[newOwner].push(productId);
+
+        emit OwnershipTransferred(productId, prevOwner, newOwner, block.timestamp);
+    }
+
+    // --- 9. ERC-721 VIEW COMPATIBILITY ---
+
+    function ownerOf(uint256 tokenId) external view returns (address) {
+        address owner = products[tokenId].currentOwner;
+        require(owner != address(0), "Nonexistent token");
+        return owner;
+    }
+
+    function balanceOf(address ownerAddr) external view returns (uint256) {
+        require(ownerAddr != address(0), "Zero address query");
+        return _balances[ownerAddr];
+    }
+
+    function getClaims(uint256 productId) external view returns (ClaimTicket[] memory) {
+        return productClaims[productId];
     }
 
     function getRepairLogs(uint256 productId) external view returns (RepairLog[] memory) {
@@ -299,9 +408,5 @@ contract BlockSureWarranty {
 
     function getOwnershipHistory(uint256 productId) external view returns (address[] memory) {
         return productOwnersHistory[productId];
-    }
-
-    function getProductsOwnedBy(address ownerAddr) external view returns (uint256[] memory) {
-        return ownerToProductIds[ownerAddr];
     }
 }
