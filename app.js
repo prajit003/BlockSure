@@ -5,7 +5,7 @@
 // Global State
 const state = {
     auth: {
-        targetRole: null,
+        targetRole: 'manufacturer',
         currentRole: null,
         isAuthenticated: false,
         credentials: {
@@ -133,7 +133,7 @@ function calculateCustomHash(serialNumber, modelName, mfrAddr, regTime) {
 }
 
 // ------------------------------------------------------------------
-// VTOP-STYLE LOGIN & MODAL HANDLERS
+// LOGIN MODAL & INSTANT AUTHENTICATION
 // ------------------------------------------------------------------
 function openLoginModal(role) {
     state.auth.targetRole = role;
@@ -150,16 +150,16 @@ function openLoginModal(role) {
         verifier: '🔍 Public Inspector Access'
     };
 
-    title.innerText = titles[role];
-    userInput.value = role === 'verifier' ? 'guest' : state.auth.credentials[role] ? state.auth.credentials[role].user : role;
+    title.innerText = titles[role] || 'Portal Login';
+    const creds = state.auth.credentials[role];
+    userInput.value = role === 'verifier' ? 'guest' : (creds ? creds.user : role);
 
     if (role === 'verifier') {
         passGroup.classList.add('hidden');
-        passInput.removeAttribute('required');
+        passInput.value = '';
     } else {
         passGroup.classList.remove('hidden');
-        passInput.setAttribute('required', 'true');
-        passInput.value = state.auth.credentials[role] ? state.auth.credentials[role].pass : '';
+        passInput.value = creds ? creds.pass : '';
     }
 
     modal.classList.remove('hidden');
@@ -171,27 +171,17 @@ function closeLoginModal() {
 }
 
 function handleLoginSubmit(e) {
-    e.preventDefault();
-    const role = state.auth.targetRole;
-    const user = document.getElementById('loginUsername').value.trim();
-    const pass = document.getElementById('loginPassword').value.trim();
+    if (e) e.preventDefault();
+    const role = state.auth.targetRole || 'manufacturer';
 
-    if (role === 'verifier') {
-        launchApplication('verifier', 'Public Inspector');
-        return;
-    }
+    const labels = {
+        manufacturer: 'Manufacturer Portal',
+        service: 'Authorized Service Center',
+        customer: 'Customer & Owner',
+        verifier: 'Public Inspector'
+    };
 
-    const creds = state.auth.credentials[role];
-    if (creds && ((user.toLowerCase() === creds.user || user.toLowerCase() === role) && pass === creds.pass)) {
-        const labels = {
-            manufacturer: 'Manufacturer Portal',
-            service: 'Authorized Service Center',
-            customer: 'Customer & Owner'
-        };
-        launchApplication(role, labels[role]);
-    } else {
-        alert("Invalid Username or Security Password!");
-    }
+    launchApplication(role, labels[role] || 'Dashboard');
 }
 
 function launchApplication(role, label) {
