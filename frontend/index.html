@@ -193,6 +193,30 @@
     <!-- 3. MAIN APPLICATION DASHBOARD -->
     <!-- ========================================================= -->
     <div id="mainDashboard" class="hidden flex-1 flex flex-col">
+        <!-- PORTAL ROLE NAVIGATION BAR -->
+        <div class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-[73px] z-30 shadow-md">
+            <div class="max-w-7xl mx-auto px-6 py-2.5 flex items-center justify-between gap-4 overflow-x-auto">
+                <nav class="flex items-center gap-2">
+                    <button id="tab-manufacturer" onclick="switchTab('manufacturer')" class="nav-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap active">
+                        <i data-lucide="factory" class="w-4 h-4"></i> Manufacturer Portal
+                    </button>
+                    <button id="tab-service" onclick="switchTab('service')" class="nav-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap">
+                        <i data-lucide="wrench" class="w-4 h-4"></i> Service Center
+                    </button>
+                    <button id="tab-customer" onclick="switchTab('customer')" class="nav-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap">
+                        <i data-lucide="user-check" class="w-4 h-4"></i> Customer Dashboard
+                    </button>
+                    <button id="tab-verifier" onclick="switchTab('verifier')" class="nav-btn px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition whitespace-nowrap">
+                        <i data-lucide="qr-code" class="w-4 h-4"></i> Public Inspector
+                    </button>
+                </nav>
+                <div class="text-[11px] text-slate-400 font-mono hidden md:flex items-center gap-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Sepolia EVM Protocol Active</span>
+                </div>
+            </div>
+        </div>
+
         <main class="max-w-7xl mx-auto px-6 py-8 flex-1 w-full flex flex-col gap-8">
 
             <!-- NOTIFICATION TOAST BAR WITH ETHERSCAN TX LINK -->
@@ -589,6 +613,48 @@
                 <button onclick="window.print()" class="bg-sky-600 hover:bg-sky-500 text-white font-semibold px-6 py-2 rounded-xl text-xs transition">
                     Print / Save as PDF
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- METAMASK WALLET HELPER MODAL -->
+    <div id="walletModal" class="hidden fixed inset-0 z-50 auth-overlay flex items-center justify-center p-4">
+        <div class="glass-panel p-8 max-w-md w-full space-y-6 relative border-purple-500/40 shadow-2xl">
+            <button onclick="closeWalletModal()" class="absolute right-4 top-4 text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+            
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 mx-auto rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center text-3xl">
+                    🦊
+                </div>
+                <h3 class="text-xl font-bold text-white">Sepolia Wallet Connection</h3>
+                <p class="text-xs text-slate-400">Connect MetaMask on Ethereum Sepolia Testnet (Chain ID 11155111)</p>
+            </div>
+
+            <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-2 text-xs text-slate-300">
+                <div class="flex items-center justify-between text-slate-400">
+                    <span>Network:</span>
+                    <span class="text-purple-300 font-mono font-semibold">Sepolia Testnet</span>
+                </div>
+                <div class="flex items-center justify-between text-slate-400">
+                    <span>Chain ID:</span>
+                    <span class="text-white font-mono">11155111 (0xaa36a7)</span>
+                </div>
+                <div class="flex items-center justify-between text-slate-400">
+                    <span>Currency:</span>
+                    <span class="text-white font-mono">Sepolia ETH</span>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="triggerMetaMaskConnect()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-semibold py-3 rounded-xl text-sm transition shadow-lg shadow-purple-600/25 flex items-center justify-center gap-2">
+                    <i data-lucide="wallet" class="w-4 h-4"></i> Connect MetaMask Wallet
+                </button>
+                <button onclick="activateSimulatorWallet()" class="w-full bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 font-semibold py-3 rounded-xl text-sm transition flex items-center justify-center gap-2">
+                    <i data-lucide="cpu" class="w-4 h-4"></i> Use Sepolia Simulator Account (0.25 ETH)
+                </button>
+                <a href="https://metamask.io/download/" target="_blank" rel="noopener noreferrer" class="w-full text-center block text-xs text-slate-400 hover:text-white underline pt-1">
+                    Don't have MetaMask? Download Extension &rarr;
+                </a>
             </div>
         </div>
     </div>
