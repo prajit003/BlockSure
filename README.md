@@ -1,34 +1,41 @@
 # BlockSure (Assurance): Electronic Warranty & Ownership Management using Blockchain
 
-> **VIT Blockchain Project**  
+> **Enterprise Blockchain Project (Ethereum Sepolia Testnet)**  
 > **Authors:**  
 > 1. R ALWIN EBENEZER (25BCE5056)  
 > 2. R PRAJIT (25BCE5022)  
 > **Guide / Faculty:** Prof. NOEL JEYGAR ROBERT  
+> **Institution:** VIT  
 
 ---
 
 ## 📌 Abstract & Overview
 
-**BlockSure** is a blockchain-based platform designed to solve traditional paper-based warranty fraud, missing proof-of-purchase documents, unverified second-hand electronics sales, and tampered repair logs.
+**BlockSure** is a decentralized electronic warranty and product ownership platform built on the **Ethereum Sepolia Testnet** (Chain ID: `11155111`). It eliminates traditional paper-based warranty fraud, missing receipts, counterfeit second-hand sales, and unauthorized repair modifications.
 
-By leveraging **Solidity Smart Contracts** on Ethereum/EVM architecture, every lifecycle event of an electronic product (Registration, Warranty Activation, Repair/Maintenance, and Second-Hand Ownership Transfer) is immutably recorded on-chain.
+All transactions—from minting digital warranty NFTs to locking claim escrow deposits and settling service center repairs—are denominated in **Sepolia ETH** and verifiable on **Sepolia Etherscan**.
 
 ---
 
 ## ⚡ Core Blockchain Concepts Implemented
 
-1. **Smart Contracts & EVM State Machine**:
-   - Manages state transitions: `Registered` ➔ `Active` ➔ `InRepair` ➔ `Expired` / `Transferred`.
-2. **Role-Based Access Control (RBAC)**:
-   - **Manufacturer**: Mints digital warranties & authorizes service centers.
-   - **Customer / Owner**: Activates coverage & transfers second-hand ownership.
-   - **Authorized Service Center**: Logs repair notes, parts replaced, and costs.
-   - **Public Verifier**: Anyone can query authenticity & scan QR codes.
-3. **Custom Non-SHA256 Cryptographic Hashing**:
-   - Uses Ethereum native `Keccak-256` combined with a **31-bit Polynomial Shift Checksum** (`calculateCustomHash`), fulfilling the project requirement for a non-SHA256 fingerprint.
-4. **Immutable Audit Trail & Event Logs**:
-   - Emits on-chain events (`ProductRegistered`, `WarrantyActivated`, `RepairLogged`, `OwnershipTransferred`).
+1. **Ethereum Sepolia Testnet Settlement**:
+   - Deployed on Ethereum Sepolia Testnet (Chain ID: `11155111`).
+   - Settle gas, claim escrow deposits, and repair invoices in **Sepolia ETH**.
+2. **Smart Contracts & EVM State Machine**:
+   - Manages state transitions: `Registered` ➔ `Active` ➔ `ClaimPending` ➔ `InRepair` ➔ `Expired` / `Transferred`.
+3. **Cryptographic Merkle Tree Batch Proofs (`verifyBatchProof`)**:
+   - Manufacturers batch-register products using Merkle Tree Roots stored on Sepolia to verify factory authenticity.
+4. **Tokenized Warranty NFT Assets (ERC-721 Model)**:
+   - Digital warranties function as transferrable NFT assets (`ownerOf`, `balanceOf`, `transferOwnership`).
+5. **EIP-712 ECDSA Off-Chain Signature Verification**:
+   - Validates manufacturer cryptographic signatures on-chain.
+6. **Custom Non-SHA256 Cryptographic Checksum Hash**:
+   - Uses Ethereum native `Keccak-256` combined with a **31-bit Polynomial Shift Checksum** (`calculateCustomHash`) directly inside the Solidity smart contract.
+7. **Role-Based Access Control (RBAC) & Dedicated Login Gate**:
+   - Separate credentials for **Manufacturer** (`MFR-SEC-2026-KEY`), **Service Center** (`SC-AUTH-9988-SEC`), and **Customer / Owner** (`1234`).
+8. **Sepolia Etherscan Audit Trail & 1-Click Printable Certificate Generator**:
+   - Real-time clickable links to `https://sepolia.etherscan.io/tx/...` and official printable PDF certificates.
 
 ---
 
@@ -39,11 +46,12 @@ BlockSure/
 ├── contracts/
 │   └── BlockSureWarranty.sol   # Solidity Smart Contract (^0.8.20)
 ├── scripts/
-│   └── deploy.js               # Hardhat / Node Deployment script
+│   └── deploy.js               # Hardhat Sepolia Deployment script
 ├── frontend/
 │   ├── index.html              # Multi-Portal Web Dashboard UI
-│   ├── app.js                  # Web3, Mock EVM Sim & QR Code Engine
+│   ├── app.js                  # Web3, Sepolia ETH Integration & QR Engine
 │   └── styles.css              # Modern Dark Glassmorphism Styling
+├── SLIDES.md                   # Updated Presentation Slides & Script
 └── README.md                   # Project Documentation & Guide
 ```
 
@@ -51,46 +59,41 @@ BlockSure/
 
 ## 🚀 How to Run & Demo
 
-### Option 1: Instant Browser Demo (Zero Setup)
-1. Navigate to the `frontend/` folder.
-2. Open `index.html` directly in any web browser (Chrome, Edge, Firefox).
-3. The app opens with a built-in **Live EVM In-Memory Simulator** pre-loaded with sample electronic products (MacBook Pro, Sony TV, Dell XPS).
-4. Click through the 4 portals:
-   - 🏭 **Manufacturer**: Register new products, authorize service centers.
-   - 👤 **Customer**: Activate warranty coverage, initiate second-hand ownership transfers.
-   - 🛠️ **Service Center**: Log repairs and maintenance.
-   - 🔍 **Public Verifier**: Scan QR codes & inspect custom non-SHA256 tamper-evident fingerprint hashes.
+### Option 1: Live Hosted Website (GitHub Pages)
+👉 **[https://prajit003.github.io/BlockSure/](https://prajit003.github.io/BlockSure/)**
 
-### Option 2: MetaMask & Hardhat Local Blockchain Node
-1. Install Hardhat or Foundry:
+1. Select any portal (Manufacturer, Service Center, Customer, or Public Inspector).
+2. Click **"Authenticate & Launch Dashboard"** (credentials are pre-filled).
+3. Connect your **MetaMask wallet** configured for **Ethereum Sepolia** or use the built-in Sepolia In-Memory Ledger Simulator.
+
+### Option 2: Deploying to Ethereum Sepolia via Hardhat
+1. Install Hardhat dependencies:
    ```bash
-   npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox
+   npm install --save-dev hardhat @nomicfoundation/hardhat-toolbox dotenv
    ```
-2. Compile contract:
+2. Configure your Sepolia private key & RPC in `hardhat.config.js`:
+   ```javascript
+   module.exports = {
+     solidity: "0.8.20",
+     networks: {
+       sepolia: {
+         url: "https://ethereum-sepolia-rpc.publicnode.com",
+         accounts: [process.env.PRIVATE_KEY]
+       }
+     }
+   };
+   ```
+3. Deploy to Sepolia:
    ```bash
-   npx hardhat compile
+   npx hardhat run scripts/deploy.js --network sepolia
    ```
-3. Deploy contract locally:
+4. Verify on Sepolia Etherscan:
    ```bash
-   npx hardhat run scripts/deploy.js --network localhost
+   npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
    ```
-4. Click the **🦊 MetaMask** toggle button in the top right of `index.html` to connect your browser wallet!
 
 ---
 
-## 🛡️ Verification & Hash Calculation Algorithm
-
-The custom non-SHA256 hash is generated as follows:
-
-```javascript
-function calculateCustomHash(serialNumber, modelName, mfrAddr, regTime) {
-    const raw = `${serialNumber}_${modelName}_${mfrAddr}_${regTime}`;
-    let polyChecksum = 0;
-    for (let i = 0; i < raw.length; i++) {
-        polyChecksum = (polyChecksum * 31 + raw.charCodeAt(i)) >>> 0;
-    }
-    const keccakHash = ethers.keccak256(ethers.toUtf8Bytes(raw));
-    const polyHex = polyChecksum.toString(16).padStart(8, '0');
-    return keccakHash.slice(0, 58) + polyHex;
-}
-```
+## 🚰 Faucets for Free Sepolia ETH
+- [Google Cloud Web3 Sepolia Faucet](https://cloud.google.com/application/web3/faucet/ethereum/sepolia)
+- [Alchemy Sepolia Faucet](https://sepoliafaucet.com)
