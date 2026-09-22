@@ -465,13 +465,16 @@ function launchApplication(role, label) {
     document.getElementById('headerUserSession').classList.add('flex');
     document.getElementById('activeUserLabel').innerText = label;
 
-    // 1. Instantly unhide the selected role view FIRST so page is never blank
+    const roleNameEl = document.getElementById('activeRoleName');
+    if (roleNameEl) roleNameEl.innerText = label;
+
+    // 1. Instantly unhide ONLY the authenticated role's portal view
     switchTab(role);
 
-    // 2. Safely render all dashboard portals
+    // 2. Safely render only authorized data
     renderAll();
 
-    showToast(`Authenticated on Sepolia Testnet! Welcome to ${label}.`, "success");
+    showToast(`Authenticated as ${label}! Single-role session active.`, "success");
 }
 
 function handleLogout() {
@@ -479,34 +482,52 @@ function handleLogout() {
     state.auth.currentRole = null;
     state.auth.isAuthenticated = false;
 
+    // Securely hide all portal views
+    document.querySelectorAll('.portal-view').forEach(v => v.classList.add('hidden'));
+
     document.getElementById('mainDashboard').classList.add('hidden');
     document.getElementById('headerUserSession').classList.add('hidden');
     document.getElementById('headerUserSession').classList.remove('flex');
     document.getElementById('portalSelectorScreen').classList.remove('hidden');
+    showToast("Session closed. Select a role and enter credentials to log in.", "info");
+    safeCreateIcons();
 }
 
 // ------------------------------------------------------------------
-// GLOBAL RENDER & TAB SWITCHER
+// GLOBAL RENDER & SECURE ROLE DISPATCHER
 // ------------------------------------------------------------------
 function renderAll() {
-    try { renderManufacturerPortal(); } catch (e) { console.warn("Mfr portal render:", e); }
-    try { renderCustomerPortal(); } catch (e) { console.warn("Customer portal render:", e); }
-    try { renderServiceCenterPortal(); } catch (e) { console.warn("Service portal render:", e); }
-    try {
-        if (state.products.length > 0) {
-            renderVerifierPortal(selectedProductForInspect || state.products[0]);
-        }
-    } catch (e) { console.warn("Verifier portal render:", e); }
+    if (!state.auth.isAuthenticated || !state.auth.currentRole) return;
+    const role = state.auth.currentRole;
+
+    if (role === 'manufacturer') {
+        try { renderManufacturerPortal(); } catch (e) { console.warn("Mfr portal render:", e); }
+    } else if (role === 'customer') {
+        try { renderCustomerPortal(); } catch (e) { console.warn("Customer portal render:", e); }
+    } else if (role === 'service') {
+        try { renderServiceCenterPortal(); } catch (e) { console.warn("Service portal render:", e); }
+    } else if (role === 'verifier') {
+        try {
+            if (state.products.length > 0) {
+                renderVerifierPortal(selectedProductForInspect || state.products[0]);
+            }
+        } catch (e) { console.warn("Verifier portal render:", e); }
+    }
 }
 
 function switchTab(tabName) {
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    // ENFORCE STRICT ROLE-BASED ACCESS CONTROL (RBAC)
+    // Only allow viewing the portal matching the currently authenticated role
+    if (state.auth.isAuthenticated && state.auth.currentRole !== tabName) {
+        showToast(`Access Restricted: You are authenticated as ${state.auth.currentRole}. Click 'Switch Role / Logout' to log into another role.`, "error");
+        return;
+    }
+
+    // Hide all portal views
     document.querySelectorAll('.portal-view').forEach(v => v.classList.add('hidden'));
 
-    const tabBtn = document.getElementById(`tab-${tabName}`);
+    // Unhide only the authorized portal
     const portalView = document.getElementById(`portal-${tabName}`);
-
-    if (tabBtn) tabBtn.classList.add('active');
     if (portalView) portalView.classList.remove('hidden');
 
     const labels = {
@@ -518,6 +539,10 @@ function switchTab(tabName) {
     const activeLabelEl = document.getElementById('activeUserLabel');
     if (activeLabelEl && labels[tabName]) {
         activeLabelEl.innerText = labels[tabName];
+    }
+    const roleNameEl = document.getElementById('activeRoleName');
+    if (roleNameEl && labels[tabName]) {
+        roleNameEl.innerText = labels[tabName];
     }
 
     if (tabName === 'verifier' && state.products.length > 0) {
