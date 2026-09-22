@@ -173,8 +173,91 @@ function safeCreateIcons() {
     }
 }
 
+// Storage Key for LocalStorage Persistence across page reloads
+const STORAGE_KEY = 'blocksure_enterprise_state_v1';
+
+function saveStateToStorage() {
+    try {
+        if (typeof localStorage === 'undefined') return;
+        const payload = {
+            products: state.products,
+            claims: state.claims,
+            repairs: state.repairs,
+            ownershipHistory: state.ownershipHistory,
+            merkleRoots: Array.from(state.merkleRoots),
+            auth: {
+                isAuthenticated: state.auth.isAuthenticated,
+                currentRole: state.auth.currentRole
+            },
+            web3: {
+                connectedAddress: state.web3.connectedAddress,
+                isSimulated: !state.web3.isMetaMaskConnected && !!state.web3.connectedAddress
+            }
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch (e) {
+        console.warn("Storage save notice:", e);
+    }
+}
+
+function loadStateFromStorage() {
+    try {
+        if (typeof localStorage === 'undefined') return false;
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        if (parsed.products && Array.isArray(parsed.products) && parsed.products.length > 0) {
+            state.products = parsed.products;
+        }
+        if (parsed.claims && typeof parsed.claims === 'object') {
+            state.claims = parsed.claims;
+        }
+        if (parsed.repairs && typeof parsed.repairs === 'object') {
+            state.repairs = parsed.repairs;
+        }
+        if (parsed.ownershipHistory && typeof parsed.ownershipHistory === 'object') {
+            state.ownershipHistory = parsed.ownershipHistory;
+        }
+        if (parsed.merkleRoots && Array.isArray(parsed.merkleRoots) && parsed.merkleRoots.length > 0) {
+            state.merkleRoots = new Set(parsed.merkleRoots);
+        }
+        if (parsed.auth && parsed.auth.isAuthenticated && parsed.auth.currentRole) {
+            state.auth.isAuthenticated = true;
+            state.auth.currentRole = parsed.auth.currentRole;
+        }
+        if (parsed.web3 && parsed.web3.isSimulated && parsed.web3.connectedAddress) {
+            setupConnectedAccount(parsed.web3.connectedAddress, true);
+        }
+        return true;
+    } catch (e) {
+        console.warn("Storage load notice:", e);
+        return false;
+    }
+}
+
+function resetDemoData() {
+    if (confirm("Reset BlockSure demo data to factory defaults? All activated warranties, newly registered products, and repair logs will be reset.")) {
+        try {
+            if (typeof localStorage !== 'undefined') {
+                localStorage.removeItem(STORAGE_KEY);
+            }
+        } catch (e) {}
+        window.location.reload();
+    }
+}
+window.resetDemoData = resetDemoData;
+
+let __appInitialized = false;
+
 // App Initialization
 function initApp() {
+    if (__appInitialized) return;
+    __appInitialized = true;
+
+    // 1. Rehydrate state from localStorage
+    loadStateFromStorage();
+
+    // 2. Compute fingerprint hashes for any product missing one
     try {
         state.products.forEach(p => {
             if (!p.customHash) {
@@ -185,7 +268,21 @@ function initApp() {
         console.warn("Fingerprint init notice:", e);
     }
 
+    // 3. Connect MetaMask if previously authorized
     checkMetaMaskProvider();
+
+    // 4. Auto-restore user session if previously authenticated
+    if (state.auth.isAuthenticated && state.auth.currentRole) {
+        const labels = {
+            manufacturer: 'Manufacturer Portal',
+            service: 'Authorized Service Center',
+            customer: 'Customer Dashboard',
+            verifier: 'Public Inspector'
+        };
+        const role = state.auth.currentRole;
+        launchApplication(role, labels[role] || 'Dashboard', true);
+    }
+
     safeCreateIcons();
 }
 
@@ -566,16 +663,26 @@ function handleLoginSubmit(e) {
     launchApplication(role, labels[role] || 'Dashboard');
 }
 
-function launchApplication(role, label) {
+function launchApplication(role, label, isRestore = false) {
     state.auth.currentRole = role;
     state.auth.isAuthenticated = true;
+    saveStateToStorage();
 
     closeLoginModal();
-    document.getElementById('portalSelectorScreen').classList.add('hidden');
-    document.getElementById('mainDashboard').classList.remove('hidden');
-    document.getElementById('headerUserSession').classList.remove('hidden');
-    document.getElementById('headerUserSession').classList.add('flex');
-    document.getElementById('activeUserLabel').innerText = label;
+    const portalScreen = document.getElementById('portalSelectorScreen');
+    if (portalScreen) portalScreen.classList.add('hidden');
+
+    const mainDash = document.getElementById('mainDashboard');
+    if (mainDash) mainDash.classList.remove('hidden');
+
+    const headerSession = document.getElementById('headerUserSession');
+    if (headerSession) {
+        headerSession.classList.remove('hidden');
+        headerSession.classList.add('flex');
+    }
+
+    const activeUserEl = document.getElementById('activeUserLabel');
+    if (activeUserEl) activeUserEl.innerText = label;
 
     const roleNameEl = document.getElementById('activeRoleName');
     if (roleNameEl) roleNameEl.innerText = label;
@@ -586,21 +693,32 @@ function launchApplication(role, label) {
     // 2. Safely render only authorized data
     renderAll();
 
-    showToast(`Authenticated as ${label}! Single-role session active.`, "success");
+    if (!isRestore) {
+        showToast(`Authenticated as ${label}! Single-role session active.`, "success");
+    }
 }
 
 function handleLogout() {
     state.auth.targetRole = null;
     state.auth.currentRole = null;
     state.auth.isAuthenticated = false;
+    saveStateToStorage();
 
     // Securely hide all portal views
     document.querySelectorAll('.portal-view').forEach(v => v.classList.add('hidden'));
 
-    document.getElementById('mainDashboard').classList.add('hidden');
-    document.getElementById('headerUserSession').classList.add('hidden');
-    document.getElementById('headerUserSession').classList.remove('flex');
-    document.getElementById('portalSelectorScreen').classList.remove('hidden');
+    const mainDash = document.getElementById('mainDashboard');
+    if (mainDash) mainDash.classList.add('hidden');
+
+    const headerSession = document.getElementById('headerUserSession');
+    if (headerSession) {
+        headerSession.classList.add('hidden');
+        headerSession.classList.remove('flex');
+    }
+
+    const portalScreen = document.getElementById('portalSelectorScreen');
+    if (portalScreen) portalScreen.classList.remove('hidden');
+
     showToast("Session closed. Select a role and enter credentials to log in.", "info");
     safeCreateIcons();
 }
@@ -752,6 +870,7 @@ function handleRegisterProduct(e) {
     state.products.push(newProd);
     state.ownershipHistory[newId] = [{ owner: mfrAddr, txHash: txHash }];
     state.repairs[newId] = [];
+    saveStateToStorage();
 
     document.getElementById('mfrRegisterForm').reset();
     renderAll();
@@ -762,6 +881,7 @@ function handlePublishMerkleRoot(e) {
     e.preventDefault();
     const root = document.getElementById('merkleRootInput').value.trim();
     state.merkleRoots.add(root);
+    saveStateToStorage();
     const txHash = generateSepoliaTxHash();
     document.getElementById('merkleRootInput').value = '';
     showToast("Merkle Tree Batch Root committed to Sepolia Testnet!", "success", txHash);
@@ -948,6 +1068,7 @@ function handleActivateWarranty(e) {
     prod.status = "Active";
     prod.txHash = generateSepoliaTxHash();
 
+    saveStateToStorage();
     document.getElementById('custActivateProdId').value = '';
     renderAll();
     showToast(`Warranty activated for #${prod.id} on Sepolia! (0.001 Sepolia ETH fee)`, "success", prod.txHash);
@@ -960,10 +1081,12 @@ function quickActivate(id) {
         prod.warrantyStartTimestamp = Date.now();
         prod.status = "Active";
         prod.txHash = generateSepoliaTxHash();
+        saveStateToStorage();
         renderAll();
         showToast(`Warranty activated for Product #${id} on Sepolia!`, "success", prod.txHash);
     }
 }
+window.quickActivate = quickActivate;
 
 function handleFileClaim(e) {
     e.preventDefault();
@@ -988,6 +1111,7 @@ function handleFileClaim(e) {
         txHash: txHash
     });
 
+    saveStateToStorage();
     document.getElementById('claimProdId').value = '';
     document.getElementById('claimIssue').value = '';
     renderAll();
@@ -1008,6 +1132,7 @@ function handleTransferOwnership(e) {
     prod.txHash = txHash;
     state.ownershipHistory[prodId].push({ owner: newOwner, txHash: txHash });
 
+    saveStateToStorage();
     document.getElementById('transferProdId').value = '';
     document.getElementById('transferNewOwnerAddr').value = '';
     renderAll();
@@ -1079,6 +1204,7 @@ function handleLogRepair(e) {
         txHash: txHash
     });
 
+    saveStateToStorage();
     document.getElementById('scProdId').value = '';
     document.getElementById('scDescription').value = '';
     document.getElementById('scParts').value = '';
