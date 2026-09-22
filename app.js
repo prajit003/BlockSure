@@ -270,36 +270,136 @@ async function triggerMetaMaskConnect() {
     await connectSepoliaWallet();
 }
 
+// Fetch live Sepolia ETH balance directly from MetaMask or RPC
+async function fetchAccountBalance(address) {
+    const ethereum = getEthereumProvider();
+    if (!ethereum || !address) return "0.2500 Sepolia ETH";
+
+    try {
+        // Direct call to MetaMask internal RPC cache - fastest & exact
+        const balanceHex = await ethereum.request({
+            method: 'eth_getBalance',
+            params: [address, 'latest']
+        });
+        if (balanceHex) {
+            if (typeof ethers !== 'undefined' && ethers.formatEther) {
+                const eth = parseFloat(ethers.formatEther(balanceHex)).toFixed(4);
+                return `${eth} Sepolia ETH`;
+            } else {
+                const wei = BigInt(balanceHex);
+                const eth = (Number(wei / 100000000000000n) / 10000).toFixed(4);
+                return `${eth} Sepolia ETH`;
+            }
+        }
+    } catch (err) {
+        console.warn("Direct balance query notice:", err);
+    }
+
+    try {
+        if (typeof ethers !== 'undefined' && ethers.BrowserProvider) {
+            const provider = new ethers.BrowserProvider(ethereum);
+            const balance = await provider.getBalance(address);
+            return `${parseFloat(ethers.formatEther(balance)).toFixed(4)} Sepolia ETH`;
+        }
+    } catch (e) {}
+
+    return state.web3.sepoliaBalance || "0.2500 Sepolia ETH";
+}
+
+// Check and sync active account & balance
+async function checkActiveAccountAndBalance() {
+    const ethereum = getEthereumProvider();
+    if (!ethereum) return;
+
+    try {
+        const accounts = await ethereum.request({ method: 'eth_accounts' });
+        if (accounts && accounts.length > 0) {
+            const currentAcc = accounts[0];
+            const prevAcc = state.web3.connectedAddress || '';
+
+            // If account has changed
+            if (currentAcc.toLowerCase() !== prevAcc.toLowerCase()) {
+                await setupConnectedAccount(currentAcc, false);
+                showToast(`MetaMask switched account: ${currentAcc.substring(0, 6)}...${currentAcc.substring(38)}`, "info");
+            } else if (state.web3.isMetaMaskConnected) {
+                // Account is the same, verify if balance has updated
+                const latestBal = await fetchAccountBalance(currentAcc);
+                if (latestBal && latestBal !== state.web3.sepoliaBalance) {
+                    state.web3.sepoliaBalance = latestBal;
+                    const balEl = document.getElementById('headerSepoliaBalance');
+                    if (balEl) balEl.innerText = latestBal;
+                }
+            }
+        } else if (state.web3.isMetaMaskConnected) {
+            handleAccountsChanged([]);
+        }
+    } catch (e) {
+        // Silent poll
+    }
+}
+
+function handleAccountsChanged(accounts) {
+    if (accounts && accounts.length > 0) {
+        setupConnectedAccount(accounts[0], false);
+        showToast(`MetaMask account switched: ${accounts[0].substring(0, 6)}...${accounts[0].substring(38)}`, "info");
+    } else {
+        state.web3.connectedAddress = null;
+        state.web3.isMetaMaskConnected = false;
+        state.web3.sepoliaBalance = "0.0000 Sepolia ETH";
+        const btnText = document.getElementById('walletBtnText');
+        if (btnText) btnText.innerText = '🦊 Connect Sepolia Wallet';
+        const btn = document.getElementById('connectMetaMaskBtn');
+        if (btn) btn.className = "px-3.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/40 text-xs font-semibold transition flex items-center gap-1.5 shadow-sm";
+        const balEl = document.getElementById('headerSepoliaBalance');
+        if (balEl) balEl.innerText = "0.0000 Sepolia ETH";
+    }
+}
+
+function attachMetaMaskEventListeners() {
+    if (window.__blockSureEthEventsAttached) return;
+    window.__blockSureEthEventsAttached = true;
+
+    const providers = [];
+    if (window.ethereum) providers.push(window.ethereum);
+    const mainProvider = getEthereumProvider();
+    if (mainProvider && !providers.includes(mainProvider)) providers.push(mainProvider);
+    if (window.ethereum && window.ethereum.providers) {
+        window.ethereum.providers.forEach(p => {
+            if (!providers.includes(p)) providers.push(p);
+        });
+    }
+
+    providers.forEach(provider => {
+        if (provider && provider.on) {
+            try {
+                provider.on('accountsChanged', handleAccountsChanged);
+                provider.on('chainChanged', () => window.location.reload());
+            } catch (e) {
+                console.warn("Event listener attach notice:", e);
+            }
+        }
+    });
+
+    // Check immediately when user clicks back to the window
+    window.addEventListener('focus', checkActiveAccountAndBalance);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            checkActiveAccountAndBalance();
+        }
+    });
+
+    // Active polling heartbeat every 1.5s
+    setInterval(checkActiveAccountAndBalance, 1500);
+}
+
 async function checkMetaMaskProvider() {
+    attachMetaMaskEventListeners();
     const ethereum = getEthereumProvider();
     if (ethereum) {
         try {
-            const chainId = await ethereum.request({ method: 'eth_chainId' });
-            if (chainId === SEPOLIA_CONFIG.chainIdHex) {
-                const accounts = await ethereum.request({ method: 'eth_accounts' });
-                if (accounts && accounts.length > 0) {
-                    await setupConnectedAccount(accounts[0], false);
-                }
-            }
-
-            // Register provider event listeners once
-            if (!window.__blockSureEthEventsAttached) {
-                window.__blockSureEthEventsAttached = true;
-                ethereum.on('accountsChanged', (accounts) => {
-                    if (accounts && accounts.length > 0) {
-                        setupConnectedAccount(accounts[0], false);
-                        showToast(`Switched account: ${accounts[0].substring(0, 6)}...${accounts[0].substring(38)}`, "info");
-                    } else {
-                        state.web3.connectedAddress = null;
-                        state.web3.isMetaMaskConnected = false;
-                        const btnText = document.getElementById('walletBtnText');
-                        if (btnText) btnText.innerText = '🦊 Connect Sepolia Wallet';
-                    }
-                });
-
-                ethereum.on('chainChanged', () => {
-                    window.location.reload();
-                });
+            const accounts = await ethereum.request({ method: 'eth_accounts' });
+            if (accounts && accounts.length > 0) {
+                await setupConnectedAccount(accounts[0], false);
             }
         } catch (e) {
             console.log("MetaMask auto-check:", e);
@@ -308,6 +408,7 @@ async function checkMetaMaskProvider() {
 }
 
 async function connectSepoliaWallet() {
+    attachMetaMaskEventListeners();
     const ethereum = getEthereumProvider();
     if (!ethereum) {
         openWalletModal();
@@ -379,17 +480,9 @@ async function setupConnectedAccount(address, isSimulated = false) {
         btn.className = "px-3.5 py-2 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/50 text-xs font-mono font-semibold transition flex items-center gap-1.5 shadow-sm";
     }
 
-    // Fetch live Sepolia ETH balance if real MetaMask
-    if (!isSimulated && window.ethereum && typeof ethers !== 'undefined' && ethers.BrowserProvider) {
-        try {
-            const provider = new ethers.BrowserProvider(window.ethereum);
-            const balance = await provider.getBalance(address);
-            const ethFormatted = parseFloat(ethers.formatEther(balance)).toFixed(4);
-            state.web3.sepoliaBalance = `${ethFormatted} Sepolia ETH`;
-        } catch (e) {
-            console.warn("Live balance fetch notice:", e);
-            state.web3.sepoliaBalance = "0.2500 Sepolia ETH";
-        }
+    // Fetch live Sepolia ETH balance
+    if (!isSimulated) {
+        state.web3.sepoliaBalance = await fetchAccountBalance(address);
     } else {
         state.web3.sepoliaBalance = "0.2500 Sepolia ETH";
     }
